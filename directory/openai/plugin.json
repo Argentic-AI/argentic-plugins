@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "argentic",
-  "version": "0.3.1",
-  "description": "Agents that resume after a crash without repeating finished actions, with a record of every run.",
+  "version": "0.3.2",
+  "description": "Argentic MCP server: run and inspect long-running agents on Argentic.",
   "author": { "name": "Argentic", "url": "https://getargentic.com" },
   "homepage": "https://getargentic.com/docs",
   "license": "MIT",
@@ -19,7 +19,7 @@
       },
       "interface": {
         "displayName": "Argentic",
-        "shortDescription": "Durable agents with a record of every run",
+        "shortDescription": "Run and inspect long-running agents.",
         "developerName": "Argentic",
         "category": "Developer Tools",
         "capabilities": ["Read", "Write"],
