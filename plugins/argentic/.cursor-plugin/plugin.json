@@ -2,7 +2,7 @@
   "name": "argentic",
   "displayName": "Argentic",
   "version": "0.3.1",
-  "description": "Agents that resume after a crash without repeating finished actions, with a record of every run. One MCP that signs in with your Argentic account.",
+  "description": "Argentic MCP server: run and inspect long-running agents on Argentic.",
   "author": {
     "name": "Argentic",
     "url": "https://getargentic.com"
