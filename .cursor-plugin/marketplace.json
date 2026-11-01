@@ -8,7 +8,7 @@
     {
       "name": "argentic",
       "source": "plugins/argentic",
-      "description": "Agents that resume after a crash without repeating finished actions, with a record of every run."
+      "description": "Argentic MCP server: run and inspect long-running agents on Argentic."
     }
   ]
 }
