@@ -7,9 +7,16 @@
   "homepage": "https://getargentic.com/docs",
   "license": "MIT",
   "keywords": ["agents", "memory", "mcp", "argentic"],
-  "skills": "./skills/",
   "extensions": {
     "com.openai": {
+      "mcpServers": {
+        "argentic": {
+          "auth": {
+            "type": "oauth",
+            "client": { "mode": "cimd" }
+          }
+        }
+      },
       "interface": {
         "displayName": "Argentic",
         "shortDescription": "Durable agents with a record of every run",
