@@ -27,6 +27,12 @@ export interface ToolDecl {
   name: string
   description: string
   parameters: Record<string, unknown>
+  /**
+   * A business-operation key such as `refund:{order_id}`. Each `{name}` is filled in from the call's arguments, and Argentic
+   * refuses a second call that produces the same key, whatever else it writes. Every `{name}` must be a required string,
+   * number, integer or boolean parameter of this tool. Left out, nothing about the tool request changes.
+   */
+  once_per?: string
 }
 
 const propKeys = ['type', 'description', 'enum'] as const
@@ -47,6 +53,41 @@ export function toArgenticSchema(schema: Record<string, any>): Record<string, un
   const result: Record<string, unknown> = { type: 'object', properties }
   if (Array.isArray(schema?.required) && schema.required.length) result.required = schema.required
   return result
+}
+
+const ONCE_PER_PLACEHOLDER = /\{([A-Za-z_][A-Za-z0-9_]{0,39})\}/g
+
+/**
+ * Check a `once_per` template the way the API does, so a mistake fails here with a clear message instead of as a refused wake.
+ * `parameters` is the tool's JSON schema (before or after `toArgenticSchema`). Throws; returns nothing.
+ */
+export function checkOncePer(tool: string, template: unknown, parameters: Record<string, unknown>): void {
+  const who = `tool "${tool}": `
+  if (typeof template !== 'string') throw new Error(`${who}once_per must be a string, such as "refund:{order_id}"`)
+  if (template.length < 3 || template.length > 120) throw new Error(`${who}once_per must be 3 to 120 characters`)
+  if (!/^[A-Za-z0-9_:.\-{}]+$/.test(template)) throw new Error(`${who}once_per: letters, digits and _ : . - plus {argument} placeholders`)
+  const names = [...template.matchAll(ONCE_PER_PLACEHOLDER)].map((m) => m[1]!)
+  if (names.length === 0) throw new Error(`${who}once_per needs at least one {argument}, such as "refund:{order_id}"`)
+  if (/[{}]/.test(template.replace(ONCE_PER_PLACEHOLDER, ''))) throw new Error(`${who}once_per has an unmatched brace`)
+  const props = ((parameters as { properties?: Record<string, { type?: unknown }> })?.properties ?? {})
+  const required = (parameters as { required?: unknown })?.required
+  for (const n of names) {
+    const p = Object.hasOwn(props, n) ? props[n] : undefined
+    if (!p || p.type === 'array') throw new Error(`${who}once_per {${n}} must be a string, number, integer or boolean property of this tool`)
+    if (!Array.isArray(required) || !required.includes(n)) throw new Error(`${who}once_per {${n}} must be a required property, so every call has a key`)
+  }
+}
+
+/** Set `once_per` on tools by name (for the AI SDK and Mastra adapters, whose tools have nowhere to carry it). Throws on a name that is not a tool or a template the API would refuse. */
+export function withOncePer<T extends ToolDecl>(tools: T[], oncePer?: Record<string, string>): T[] {
+  if (!oncePer) return tools
+  const names = new Set(tools.map((t) => t.name))
+  for (const k of Object.keys(oncePer)) if (!names.has(k)) throw new Error(`oncePer names "${k}", which is not one of the tools`)
+  return tools.map((t) => {
+    if (!Object.hasOwn(oncePer, t.name)) return t
+    checkOncePer(t.name, oncePer[t.name], toArgenticSchema(t.parameters))
+    return { ...t, once_per: oncePer[t.name] }
+  })
 }
 
 export interface WakeBody {
@@ -506,11 +547,11 @@ export async function runDurable(opts: RunOptions): Promise<RunResult> {
   const model = opts.model ?? freeModel
   const ledger = new Ledger(opts.ledgerPath)
   const byName = new Map(tools.map((t) => [t.name, t]))
-  const decls: ToolDecl[] = tools.map(({ name, description, parameters }) => ({
-    name,
-    description: description || name,
-    parameters: toArgenticSchema(parameters),
-  }))
+  const decls: ToolDecl[] = tools.map(({ name, description, parameters, once_per }) => {
+    const schema = toArgenticSchema(parameters)
+    if (once_per !== undefined) checkOncePer(name, once_per, schema)
+    return { name, description: description || name, parameters: schema, ...(once_per !== undefined && { once_per }) }
+  })
 
   const wakes: string[] = []
   let message = opts.task

@@ -51,6 +51,10 @@ console.log(out.reply)
 
 Keep `agent` and `runId` the same across restarts. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `runDurable` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
 
+## Once per operation (`once_per`, 0.1.7)
+
+A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one. Set it on a `DurableTool` directly, or pass `{ oncePer: { refund_order: 'refund:{order_id}' } }` as the second argument to `fromAiSdkTools` or `fromMastraTools`. The template is checked before the request is sent. See [TOOLS.md](TOOLS.md#declaring-a-tool-once_per). 0.1.6 and earlier dropped the field.
+
 ## Waking on a schedule (handleDue)
 
 Beta, and off by default on the hosted API. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
