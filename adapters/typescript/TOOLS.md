@@ -30,6 +30,26 @@ Pass only the services you use. Secrets, the From address and the allow lists co
 
 `stripe_charge` makes an off-session PaymentIntent with `confirm=true` for a saved customer and payment method.
 
+## Declaring a tool: `once_per`
+
+A tool you pass to `runDurable` (or build with `fromAiSdkTools` / `fromMastraTools`) can carry a `once_per` template: a business-operation key whose `{name}` placeholders are filled in from the call's arguments. Argentic refuses a second call that produces the same key, whatever else it writes, in this reply or any later wake, and tells the agent why. This is on top of the retry key above: the retry key makes one call safe to repeat, `once_per` stops the agent making the same call twice with different wording.
+
+```ts
+const tools = await fromAiSdkTools(
+  { refund_order: tool({ description: 'Refund an order.', inputSchema: z.object({ order_id: z.string(), amount_usd: z.number() }), execute: refund }) },
+  { oncePer: { refund_order: 'refund:{order_id}' } },
+)
+// A hand-written tool sets it directly: { name: 'refund_order', description, parameters, once_per: 'refund:{order_id}', execute }
+```
+
+`refund:{order_id}` allows one `refund_order` call per `order_id`; refunding order 1182 a second time with another amount is refused before your code runs. Several tools may share a template to share one key space. Rules, checked in the client with the API's wording before any request is sent:
+
+- 3 to 120 characters: letters, digits and `_ : . -`, plus `{argument}` placeholders.
+- At least one placeholder, and no stray braces.
+- Each placeholder names a parameter of this tool that is a string, number, integer or boolean and is listed in `required`, so every call has a key.
+
+Left out, the request is exactly what 0.1.6 sent.
+
 ## How a stop and a restart go
 
 1. Before it calls out, a tool writes an intent (`started`) to `statePath`. After the answer it writes `done` with the result. A `done` intent returns its result and calls nothing.
