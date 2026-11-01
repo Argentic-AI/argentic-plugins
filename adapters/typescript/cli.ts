@@ -179,6 +179,11 @@ async function demo(argv: string[]) {
   out()
   out(`See it in the dashboard: ${dash}/platform/ ${dim('->')} Runs ${dim('->')} ${agent}`)
   out(dim('Open the oldest run (the one you killed) and press Check under Proof of what ran.'))
+  if (resuming && res.status === 'done') {
+    out()
+    out(`${bold('Worth showing someone?')} On that run page, press Share proof for a read-only link.`)
+    out(dim('It shows what ran and each action’s key. Messages and tool data stay private, and you can stop sharing any time.'))
+  }
   out(dim('Start over with --fresh.'))
   if (!clean) process.exitCode = 1
 }
