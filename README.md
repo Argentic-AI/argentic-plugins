@@ -1,6 +1,6 @@
 # Argentic plugins
 
-Connect your coding agent to [Argentic](https://getargentic.com/docs): wake agents that keep their memory between calls, read what they remember, give them tools, and manage your API keys, usage and budget.
+Argentic runs your agents for hours. This repo connects your coding agent to [Argentic](https://getargentic.com/docs): wake agents that keep their memory between calls, read what they remember, give them tools, and manage your API keys, usage and budget.
 
 This repo holds only manifests, skills, MCP settings and small client adapters. The engine is not in it.
 

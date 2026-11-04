@@ -1,7 +1,7 @@
 {
   "name": "argentic",
   "version": "0.1.1",
-  "description": "Skills for building on the Argentic Engine API. Add the MCP server separately; see the README.",
+  "description": "Argentic runs your agents for hours. Skills for building on the Argentic engine API. Add the MCP server separately; see the README.",
   "author": { "name": "Argentic", "url": "https://getargentic.com" },
   "homepage": "https://getargentic.com/docs",
   "license": "MIT",

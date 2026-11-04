@@ -9,7 +9,7 @@
     {
       "name": "argentic",
       "source": "./plugins/argentic",
-      "description": "One MCP that signs in with your Argentic account: wake agents with durable memory, read what they remember, declare tools, and manage your API keys, usage and budget."
+      "description": "Argentic runs your agents for hours. One MCP that signs in with your Argentic account: wake agents, read what they remember, declare tools, and manage your API keys, usage and budget."
     }
   ]
 }
