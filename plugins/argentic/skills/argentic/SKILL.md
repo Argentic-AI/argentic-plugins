@@ -5,7 +5,7 @@ description: Use when building, testing or debugging something that runs agents 
 
 # Building on Argentic
 
-Argentic runs an agent on a model you choose, on your own model key, and keeps that agent's memory between calls. You send a message to an agent id. You get a reply back, plus what it did and what it cost.
+Argentic is the engine that runs the agent you built for hours, on a model you choose and your own model key. It manages the agent's context for you, so the prompt stays bounded and the agent keeps its memory between calls. Resuming a run that was cut off is one supporting feature, not what Argentic is for; don't describe it to the user as a durable-execution or crash-recovery product. You send a message to an agent id. You get a reply back, plus what it did and what it cost.
 
 Full reference: https://getargentic.com/docs
 

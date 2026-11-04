@@ -2,7 +2,7 @@
   "name": "argentic",
   "displayName": "Argentic",
   "version": "0.3.1",
-  "description": "One MCP that signs in with your Argentic account.",
+  "description": "Argentic runs your agents for hours. One MCP that signs in with your Argentic account, so your coding agent can wake agents, check what they did and manage usage and budget.",
   "author": {
     "name": "Argentic",
     "url": "https://getargentic.com"
