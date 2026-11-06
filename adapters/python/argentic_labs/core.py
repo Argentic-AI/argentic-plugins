@@ -155,13 +155,15 @@ class Argentic:
         self._log = log
 
     # One HTTP call. Returns (status, headers, parsed body). Never raises on HTTP errors.
-    def _post(self, path: str, body: dict[str, Any], headers: dict[str, str]) -> tuple[int, Any, dict[str, Any]]:
+    def _post(
+        self, path: str, body: dict[str, Any] | None, headers: dict[str, str], method: str = "POST"
+    ) -> tuple[int, Any, dict[str, Any]]:
         req = urllib.request.Request(
             self.base_url + path,
-            data=json.dumps(body).encode(),
-            method="POST",
+            data=None if body is None else json.dumps(body).encode(),
+            method=method,
             headers={
-                "Content-Type": "application/json",
+                **({} if body is None else {"Content-Type": "application/json"}),
                 "Authorization": f"Bearer {self.api_key}",
                 "User-Agent": f"argentic-labs-python/{__version__}",
                 **headers,
@@ -180,21 +182,23 @@ class Argentic:
             data = {"error": str(data)[:200]}
         return status, hdrs, data
 
-    def _send(self, what: str, path: str, body: dict[str, Any], headers: dict[str, str]) -> tuple[Any, dict[str, Any]]:
-        """POST until it answers 2xx, then return (headers, body). A queued (409) answer waits and resends, a 5xx or
+    def _send(
+        self, what: str, path: str, body: dict[str, Any] | None, headers: dict[str, str], method: str = "POST"
+    ) -> tuple[Any, dict[str, Any]]:
+        """POST (or `method`) until it answers 2xx, then return (headers, body). A queued (409) answer waits and resends, a 5xx or
         network error retries with backoff, and anything else raises ArgenticError."""
         failures = 0
         queued = 0
         while True:
             net: BaseException | None = None
             try:
-                status, hdrs, data = self._post(path, body, headers)
+                status, hdrs, data = self._post(path, body, headers, method)
             except (urllib.error.URLError, http.client.HTTPException, OSError) as e:  # TimeoutError is an OSError
                 net = e
                 status, hdrs, data = None, {}, {"error": str(e)}
             if status is not None and 200 <= status < 300:
                 return hdrs, data
-            if status == 409:  # queued: wait, then send the SAME request with the SAME key
+            if status == 409 and method == "POST":  # queued: wait, then send the SAME request with the SAME key
                 queued += 1
                 if queued > self.max_queued_waits:
                     raise ArgenticError(f"{what} stayed queued", status, data)
@@ -262,6 +266,62 @@ class Argentic:
             resumed=data.get("resumed"),
             error=data.get("error"),
         )
+
+    def due(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """What is due now: plans past their wake_at, schedules and timers whose time has come, and agents waiting on an
+        answered approval or a hook. Read only; costs nothing."""
+        q = "" if limit is None else f"?limit={int(limit)}"
+        _, data = self._send("due", f"/v1/due{q}", None, {}, "GET")
+        return data.get("due") or []
+
+    def _schedule_path(self, agent: str, name: str | None, memory: str | None) -> str:
+        base = f"/v1/agents/{urllib.parse.quote(agent, safe='')}/schedules"
+        if name is not None:
+            base += f"/{urllib.parse.quote(name, safe='')}"
+        return base if memory is None else f"{base}?memory={urllib.parse.quote(memory, safe='')}"
+
+    def put_schedule(
+        self,
+        agent: str,
+        name: str,
+        *,
+        message: str,
+        cron: str | None = None,
+        at: str | None = None,
+        enabled: bool | None = None,
+        memory: str | None = None,
+    ) -> dict[str, Any]:
+        """Create or replace a recurring schedule (`cron`: five UTC fields) or a one-shot timer (`at`: ISO 8601 with an
+        offset). Send exactly one of them. The hosted API must have schedules switched on."""
+        body: dict[str, Any] = {"message": message}
+        if cron is not None:
+            body["cron"] = cron
+        if at is not None:
+            body["at"] = at
+        if enabled is not None:
+            body["enabled"] = enabled
+        _, data = self._send("put_schedule", self._schedule_path(agent, name, memory), body, {}, "PUT")
+        return data.get("schedule") or {}
+
+    def schedules(self, agent: str, memory: str | None = None) -> list[dict[str, Any]]:
+        """The schedules and timers of one agent."""
+        _, data = self._send("schedules", self._schedule_path(agent, None, memory), None, {}, "GET")
+        return data.get("schedules") or []
+
+    def delete_schedule(self, agent: str, name: str, memory: str | None = None) -> None:
+        """Delete a schedule or timer. Raises ArgenticError (404) if it does not exist."""
+        self._send("delete_schedule", self._schedule_path(agent, name, memory), None, {}, "DELETE")
+
+    def set_wake_url(self, url: str | None) -> str | None:
+        """Where Argentic posts a signed `agent.due` notice (https, port 443, a public host), or None to stop the
+        notices and keep polling due(). Returns the stored address."""
+        _, data = self._send("set_wake_url", "/v1/settings/wake_url", {"url": url}, {}, "PUT")
+        return data.get("wake_url")
+
+    def notices(self) -> dict[str, Any]:
+        """`wake_url` and `signing_secret` (`whsec_...`, the `secret` for handle_due / verify_due)."""
+        _, data = self._send("notices", "/v1/settings/notices", None, {}, "GET")
+        return data
 
     def replay(self, agent: str, wake: str) -> dict[str, Any]:
         """Re-render a wake's prompts from the journal and compare them to what the model was shown. Spends nothing.

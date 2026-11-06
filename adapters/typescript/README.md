@@ -57,9 +57,21 @@ A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from 
 
 ## Waking on a schedule (handleDue)
 
+Create a recurring schedule or a one-shot timer, and read what is due:
+
+```ts
+const client = new Argentic()
+await client.putSchedule('support-bot', 'morning-check', { cron: '0 9 * * *', message: 'Review overnight tickets.' }) // five UTC fields
+await client.putSchedule('support-bot', 'follow-up', { at: '2026-11-20T09:00:00Z', message: 'Chase the open refund.' }) // one-shot
+await client.schedules('support-bot')   // name, cron or at, next_at, last_fired_at, fires
+await client.due()                      // what is due now; wake each agent with fire_due, or let the notice below do it
+await client.deleteSchedule('support-bot', 'follow-up')
+```
+
+
 Beta, and off by default on the hosted API. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
 
-The secret (`whsec_...`) is shown once, when you register the `wake_url`. Store it like a password, for example as `ARGENTIC_WEBHOOK_SECRET`. The model key stays on your server: set `MODEL_KEY` there, as for any other wake.
+Register the address and read the secret with the client: `await client.setWakeUrl('https://app.example.com/argentic/due')`, then `(await client.notices()).signing_secret` (`whsec_...`). Store it like a password, for example as `ARGENTIC_WEBHOOK_SECRET`. The model key stays on your server: set `MODEL_KEY` there, as for any other wake.
 
 ```ts
 import { Hono } from 'hono'
