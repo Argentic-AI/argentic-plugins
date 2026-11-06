@@ -2,7 +2,9 @@
 
 Argentic runs the agent loop. Your Vercel AI SDK or Mastra tools and system prompt carry over; the framework's own loop (`generateText`, `Agent`, Mastra `Agent.generate`) is not used.
 
-Each tool call the agent makes comes back to your code to carry out. If the process dies mid-run, run it again: it resumes without repeating a finished action, and the run keeps proof of what ran.
+Each turn, Argentic rebuilds the prompt from a journal of the run instead of replaying an ever-growing transcript: state blocks plus a recent tail of about 40K tokens. The journal keeps the full record, so you can see every step the agent took and check it against what the model saw.
+
+Each tool call the agent makes comes back to your code to carry out. If the process dies mid-run, run it again: it resumes without repeating a finished action.
 
 ## Try it
 
@@ -69,7 +71,7 @@ await client.deleteSchedule('support-bot', 'follow-up')
 ```
 
 
-Beta, and off by default on the hosted API. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
+Beta, off by default on the hosted API, and open to single beta users only for now. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
 
 Register the address and read the secret with the client: `await client.setWakeUrl('https://app.example.com/argentic/due')`, then `(await client.notices()).signing_secret` (`whsec_...`). Store it like a password, for example as `ARGENTIC_WEBHOOK_SECRET`. The model key stays on your server: set `MODEL_KEY` there, as for any other wake.
 

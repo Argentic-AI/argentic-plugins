@@ -1,6 +1,6 @@
 # argentic-labs
 
-Argentic client for Python. Argentic runs your agent's loop: it calls the model, keeps the journal, and hands each tool call back to your code as an action with a stable key. Kill your process mid-run and start it again: it resumes without repeating a finished action, and the run keeps proof of what ran.
+Argentic client for Python. Argentic runs your agent's loop: it calls the model, keeps the journal, and hands each tool call back to your code as an action with a stable key. Each turn it rebuilds the prompt from the journal (state blocks plus a recent tail of about 40K tokens) instead of replaying an ever-growing transcript, and the journal keeps the full record. Kill your process mid-run and start it again: it resumes without repeating a finished action.
 
 The package is the client and `run_durable`, with no dependencies (Python 3.10+), plus three adapters that take the tools you already wrote:
 
