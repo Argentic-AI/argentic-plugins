@@ -160,6 +160,53 @@ export function hintFor(e: unknown): string | undefined {
   return undefined
 }
 
+/** The body of a schedule write: exactly one of `cron` or `at`. */
+export interface ScheduleBody {
+  /** Five numeric UTC fields (numbers, `*`, ranges, lists, steps). Occurrences closer than the host's grid (60 minutes in the beta) are refused. */
+  cron?: string
+  /** A one-shot timer: ISO 8601 with an offset, in the future by at least the grid, at most 366 days ahead. */
+  at?: string
+  /** What the agent is told when it fires, up to 4,000 characters. */
+  message: string
+  enabled?: boolean
+}
+
+export interface Schedule {
+  name: string
+  /** Present on a recurring schedule. */
+  cron?: string
+  /** Present on a one-shot timer, with `timer: true`. */
+  at?: string
+  timer?: true
+  message: string
+  enabled: boolean
+  next_at: string
+  last_fired_at: string | null
+  fires: number
+}
+
+/** One entry of due(): a plan (`plan_id`, `wake_at`), a schedule or timer (`schedule`, `scheduled_at`) or an agent waiting on an event (`reasons`, `since`). */
+export interface DueItem {
+  agent: string
+  memory?: string
+  plan_id?: number
+  text?: string
+  wake_at?: string
+  schedule?: string
+  scheduled_at?: string
+  timer?: true
+  reasons?: string[]
+  since?: string
+  /** The notice to your wake_url ran out of attempts. */
+  notice_failing?: true
+}
+
+export interface NoticeSettings {
+  wake_url: string | null
+  /** Give this to handleDue / verifyDue as `secret`. */
+  signing_secret: string
+}
+
 export interface ClientOptions {
   /** Defaults to the ARGENTIC_API_KEY environment variable. */
   apiKey?: string
@@ -232,7 +279,52 @@ export class Argentic {
     }
   }
 
-  private async send(path: string, body: string, headers: Record<string, string>): Promise<Response> {
+  /** What is due now: plans past their wake_at, schedules and timers whose time has come, and agents waiting on an answered approval or a hook. Read only; costs nothing. */
+  async due(opts: { limit?: number } = {}): Promise<DueItem[]> {
+    const q = opts.limit === undefined ? '' : `?limit=${encodeURIComponent(String(opts.limit))}`
+    const res = await this.send(`/v1/due${q}`, undefined, this.plainHeaders(), 'GET')
+    return ((await res.json()) as { due?: DueItem[] }).due ?? []
+  }
+
+  /** Create or replace a recurring schedule (`cron`, five UTC fields) or a one-shot timer (`at`, ISO 8601 with an offset) on an agent. Needs the hosted API to have schedules switched on. */
+  async putSchedule(agent: string, name: string, body: ScheduleBody, opts: { memory?: string } = {}): Promise<Schedule> {
+    const res = await this.send(this.schedulePath(agent, name, opts.memory), JSON.stringify(body), { ...this.plainHeaders(), 'Content-Type': 'application/json' }, 'PUT')
+    return ((await res.json()) as { schedule: Schedule }).schedule
+  }
+
+  /** The schedules and timers of one agent. */
+  async schedules(agent: string, opts: { memory?: string } = {}): Promise<Schedule[]> {
+    const res = await this.send(this.schedulePath(agent, undefined, opts.memory), undefined, this.plainHeaders(), 'GET')
+    return ((await res.json()) as { schedules?: Schedule[] }).schedules ?? []
+  }
+
+  /** Delete a schedule or timer. Throws a 404 ArgenticError if it does not exist. */
+  async deleteSchedule(agent: string, name: string, opts: { memory?: string } = {}): Promise<void> {
+    await this.send(this.schedulePath(agent, name, opts.memory), undefined, this.plainHeaders(), 'DELETE')
+  }
+
+  /** Where Argentic posts a signed `agent.due` notice (https, port 443, a public host), or null to stop the notices and keep polling due(). Returns the stored address. */
+  async setWakeUrl(url: string | null): Promise<string | null> {
+    const res = await this.send('/v1/settings/wake_url', JSON.stringify({ url }), { ...this.plainHeaders(), 'Content-Type': 'application/json' }, 'PUT')
+    return ((await res.json()) as { wake_url: string | null }).wake_url
+  }
+
+  /** The wake URL and the signing secret (`whsec_...`) to give handleDue as `secret`. */
+  async notices(): Promise<NoticeSettings> {
+    const res = await this.send('/v1/settings/notices', undefined, this.plainHeaders(), 'GET')
+    return (await res.json()) as NoticeSettings
+  }
+
+  private plainHeaders(): Record<string, string> {
+    return { Authorization: `Bearer ${this.apiKey}` }
+  }
+
+  private schedulePath(agent: string, name: string | undefined, memory: string | undefined): string {
+    const base = `/v1/agents/${encodeURIComponent(agent)}/schedules${name === undefined ? '' : `/${encodeURIComponent(name)}`}`
+    return memory === undefined ? base : `${base}?memory=${encodeURIComponent(memory)}`
+  }
+
+  private async send(path: string, body: string | undefined, headers: Record<string, string>, method = 'POST'): Promise<Response> {
     let failures = 0
     let queued = 0
     for (;;) {
@@ -240,16 +332,17 @@ export class Argentic {
       let netError: unknown
       try {
         res = await this.doFetch(this.baseUrl + path, {
-          method: 'POST',
+          method,
           headers,
-          body,
+          ...(body === undefined ? {} : { body }),
           ...(this.timeoutMs > 0 ? { signal: AbortSignal.timeout(this.timeoutMs) } : {}),
         })
       } catch (e) {
         netError = e
       }
       if (res && res.ok) return res
-      if (res && res.status === 409) {
+      // 409 on a wake means queued behind another call; on a schedule write it means a limit, which is the caller's to read.
+      if (res && res.status === 409 && method === 'POST') {
         const info = (await res.json().catch(() => ({}))) as { retry_after?: number }
         if (++queued > this.maxQueuedWaits) throw new ArgenticError('still queued after waiting', 409, info)
         await this.sleep(Math.min(Math.max(info.retry_after ?? 1, 0), 5) * 1000)
