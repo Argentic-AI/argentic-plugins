@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, TypedDict
 
-__version__ = "0.1.6"
+__version__ = "0.1.7"
 
 DEFAULT_BASE_URL = "https://api.getargentic.com"
 BACKOFF = (1, 2, 4, 8)  # waits between the 5 tries on 5xx or network errors
@@ -232,6 +232,8 @@ class Argentic:
         limits: Mapping[str, Any] | None = None,
         fire_due: bool = False,
         memory: str | None = None,
+        context: str | None = None,
+        tool_choice: str | Mapping[str, Any] | None = None,
     ) -> WakeResponse:
         """Wake an agent with a message, or with `fire_due=True` and no message for the plans, schedules and timers that
         have fallen due (the API refuses both together). `memory` picks one of the agent's memories. Safe to call again
@@ -246,8 +248,12 @@ class Argentic:
             body["memory"] = memory
         if system:
             body["system"] = system
+        if context:
+            body["context"] = context  # facts for this call only; not written to the journal or memory
         if tools:
             body["tools"] = tools
+        if tool_choice is not None:
+            body["tool_choice"] = tool_choice  # "auto", "required" or {"type": "tool", "name": ...}
         if limits:
             body["limits"] = limits
         headers = {"Idempotency-Key": idempotency_key}
@@ -302,6 +308,17 @@ class Argentic:
             body["enabled"] = enabled
         _, data = self._send("put_schedule", self._schedule_path(agent, name, memory), body, {}, "PUT")
         return data.get("schedule") or {}
+
+    def put_tools(self, agent: str, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Declare an agent's tools once (at most 32). A wake that sends no `tools` uses them; one that does uses those
+        instead. Replaces what was stored; an empty list clears it. Returns the stored tools."""
+        _, data = self._send("put_tools", f"/v1/agents/{urllib.parse.quote(agent, safe='')}/tools", {"tools": tools}, {}, "PUT")
+        return data.get("tools") or []
+
+    def get_tools(self, agent: str) -> list[dict[str, Any]]:
+        """The tools stored for an agent with put_tools(), or an empty list."""
+        _, data = self._send("get_tools", f"/v1/agents/{urllib.parse.quote(agent, safe='')}/tools", None, {}, "GET")
+        return data.get("tools") or []
 
     def schedules(self, agent: str, memory: str | None = None) -> list[dict[str, Any]]:
         """The schedules and timers of one agent."""

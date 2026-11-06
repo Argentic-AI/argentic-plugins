@@ -33,6 +33,12 @@ export interface ToolDecl {
    * number, integer or boolean parameter of this tool. Left out, nothing about the tool request changes.
    */
   once_per?: string
+  /**
+   * Leave this tool out of the prompt. The agent finds it by describing what it needs (`find_tools`) and calls it through
+   * `use_tool`; the call still comes back in `actions` as this tool. Worth it from about ten tools or ten thousand tokens of
+   * schemas. Not allowed on a tool that waits for a person or is named in `tool_choice`.
+   */
+  defer_loading?: true
 }
 
 const propKeys = ['type', 'description', 'enum'] as const
@@ -99,7 +105,11 @@ export interface WakeBody {
   memory?: string
   model: ModelSpec
   system?: string
+  /** Facts for this call only (opening hours, the signed-in user's plan), up to 16,000 characters. Not written to the journal or memory; send it again on the next call if the agent still needs it. */
+  context?: string
   tools?: ToolDecl[]
+  /** Whether this call must end with a call to one of your tools. `auto` (default), `required`, or `{ type: 'tool', name }`. */
+  tool_choice?: 'auto' | 'required' | { type: 'tool'; name: string }
   limits?: { max_usd?: number; max_turns?: number }
 }
 
@@ -301,6 +311,26 @@ export class Argentic {
   /** Delete a schedule or timer. Throws a 404 ArgenticError if it does not exist. */
   async deleteSchedule(agent: string, name: string, opts: { memory?: string } = {}): Promise<void> {
     await this.send(this.schedulePath(agent, name, opts.memory), undefined, this.plainHeaders(), 'DELETE')
+  }
+
+  /**
+   * Declare an agent's tools once (at most 32). A wake that sends no `tools` uses them; a wake that does send `tools` uses
+   * those instead. Replaces what was stored; an empty list clears it. Returns the stored tools.
+   */
+  async putTools(agent: string, tools: ToolDecl[]): Promise<ToolDecl[]> {
+    const res = await this.send(
+      `/v1/agents/${encodeURIComponent(agent)}/tools`,
+      JSON.stringify({ tools }),
+      { ...this.plainHeaders(), 'Content-Type': 'application/json' },
+      'PUT',
+    )
+    return ((await res.json()) as { tools?: ToolDecl[] }).tools ?? []
+  }
+
+  /** The tools stored for an agent with putTools(), or an empty list. */
+  async tools(agent: string): Promise<ToolDecl[]> {
+    const res = await this.send(`/v1/agents/${encodeURIComponent(agent)}/tools`, undefined, this.plainHeaders(), 'GET')
+    return ((await res.json()) as { tools?: ToolDecl[] }).tools ?? []
   }
 
   /** Where Argentic posts a signed `agent.due` notice (https, port 443, a public host), or null to stop the notices and keep polling due(). Returns the stored address. */

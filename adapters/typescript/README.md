@@ -57,6 +57,15 @@ Keep `agent` and `runId` the same across restarts. A request that takes longer t
 
 A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one. Set it on a `DurableTool` directly, or pass `{ oncePer: { refund_order: 'refund:{order_id}' } }` as the second argument to `fromAiSdkTools` or `fromMastraTools`. The template is checked before the request is sent. See [TOOLS.md](TOOLS.md#declaring-a-tool-once_per). 0.1.6 and earlier dropped the field.
 
+## Tools, context and deferred loading (0.1.10)
+
+Declare an agent's tools once with `client.putTools(agent, tools)` and leave `tools` out of later wakes; `client.tools(agent)` reads them back. A wake can also carry `context` (facts for that call only, such as the signed-in user's plan; it is not written to the journal) and `tool_choice` (`'auto'`, `'required'` or `{ type: 'tool', name }`). On a tool, `defer_loading: true` keeps its schema out of the prompt until the agent looks it up, which pays off from about ten tools.
+
+```ts
+await client.putTools('support-bot', [{ name: 'book_slot', description: 'Book a slot.', parameters: { type: 'object', properties: { day: { type: 'string' } }, required: ['day'] } }])
+const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: freeModel, context: 'Plan: pro' }, 'book-1')
+```
+
 ## Waking on a schedule (handleDue)
 
 Create a recurring schedule or a one-shot timer, and read what is due:
