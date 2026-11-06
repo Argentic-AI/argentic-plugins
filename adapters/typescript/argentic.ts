@@ -37,12 +37,27 @@ export interface ToolDecl {
 
 const propKeys = ['type', 'description', 'enum'] as const
 
+/** True when any top-level property is an object, or an array of objects (or of anything that is not a plain scalar). */
+function isNested(schema: Record<string, any>): boolean {
+  const flat = ['string', 'number', 'integer', 'boolean']
+  return Object.values<Record<string, any>>(schema?.properties ?? {}).some((p) => {
+    if (p?.type === 'object' || p?.properties) return true
+    return p?.type === 'array' && p.items && !flat.includes(p.items.type)
+  })
+}
+
 /**
  * Trim a JSON schema to the subset Argentic accepts: an object of string, number,
  * integer, boolean or array-of-those properties, with description, enum and required.
  * Framework extras ($schema, additionalProperties, title, defaults) are dropped.
  */
 export function toArgenticSchema(schema: Record<string, any>): Record<string, unknown> {
+  // A nested argument (an object, or an array of objects) cannot be trimmed to the flat subset without losing what is inside it. The API reads such a schema as a
+  // JSON Schema for the arguments, so it goes through as it is, less the framework's `$schema` marker.
+  if (isNested(schema)) {
+    const { $schema: _, ...rest } = schema
+    return rest
+  }
   const properties: Record<string, unknown> = {}
   for (const [name, prop] of Object.entries<Record<string, any>>(schema?.properties ?? {})) {
     const out: Record<string, unknown> = {}

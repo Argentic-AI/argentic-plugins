@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 [project]
 name = "argentic-labs"
 version = "0.1.6"
-description = "Argentic client for Python: durable agent runs that resume without repeating a finished action. Adapters for LangChain / LangGraph and the OpenAI Agents SDK."
+description = "Argentic client for Python: run the agent you built for hours on the Argentic engine, on a budget you set, with every step shown. Adapters for LangChain / LangGraph and the OpenAI Agents SDK."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "Argentic", email = "hi@getargentic.com" }]
-keywords = ["agents", "ai-agents", "durable", "resume", "idempotent", "langchain", "langgraph", "openai-agents", "pydantic-ai", "argentic"]
+keywords = ["agents", "ai-agents", "long-running", "resume", "idempotent", "langchain", "langgraph", "openai-agents", "pydantic-ai", "argentic"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",

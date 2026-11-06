@@ -1,7 +1,7 @@
 {
   "name": "@argentic-labs/client",
   "version": "0.1.8",
-  "description": "Argentic client for TypeScript: durable agent runs that resume without repeating a finished action. Adapters for the Vercel AI SDK and Mastra.",
+  "description": "Argentic client for TypeScript: run the agent you built for hours on the Argentic engine, on a budget you set, with every step shown. Adapters for the Vercel AI SDK and Mastra.",
   "license": "MIT",
   "type": "module",
   "engines": { "node": ">=22" },
@@ -37,6 +37,6 @@
     "directory": "adapters/typescript"
   },
   "homepage": "https://getargentic.com/docs",
-  "keywords": ["agents", "durable", "ai-sdk", "mastra", "argentic"],
+  "keywords": ["agents", "long-running", "ai-sdk", "mastra", "argentic"],
   "publishConfig": { "access": "public", "provenance": true }
 }

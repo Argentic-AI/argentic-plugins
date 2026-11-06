@@ -592,10 +592,30 @@ def _settle(value: Any) -> Any:
 _CARRIES_ON = ("turn_cap", "time_cap")
 
 
+def _is_nested(schema: dict[str, Any] | None) -> bool:
+    """True when a top-level property is an object, or an array of objects (anything but plain scalars)."""
+    flat = ("string", "number", "integer", "boolean")
+    for prop in ((schema or {}).get("properties") or {}).values():
+        if not isinstance(prop, dict):
+            continue
+        if prop.get("type") == "object" or "properties" in prop:
+            return True
+        items = prop.get("items")
+        if prop.get("type") == "array" and isinstance(items, dict) and items.get("type") not in flat and items:
+            return True
+    return False
+
+
 def to_argentic_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Trim a JSON schema to the subset Argentic accepts: an object of string, number,
     integer, boolean or array-of-those properties, with description, enum and required.
-    Framework extras ($schema, additionalProperties, title, defaults) are dropped."""
+    Framework extras ($schema, additionalProperties, title, defaults) are dropped.
+
+    A nested argument (an object, or an array of objects) cannot be trimmed without losing what is
+    inside it. The API reads such a schema as a JSON Schema for the arguments, so it goes through
+    as it is, less the `$schema` marker."""
+    if _is_nested(schema):
+        return {k: v for k, v in schema.items() if k != "$schema"}
     props: dict[str, Any] = {}
     for name, prop in (schema or {}).get("properties", {}).items():
         out = {k: prop[k] for k in ("type", "description", "enum") if k in prop}
