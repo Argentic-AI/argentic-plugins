@@ -1,6 +1,6 @@
 {
   "name": "@argentic-labs/client",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "Argentic client for TypeScript. The engine runs your agent for hours, rebuilding each prompt from a journal (state blocks plus a recent tail of about 40K tokens) instead of an ever-growing transcript. Adapters for the Vercel AI SDK and Mastra.",
   "license": "MIT",
   "type": "module",

@@ -66,6 +66,10 @@ await client.putTools('support-bot', [{ name: 'book_slot', description: 'Book a 
 const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: freeModel, context: 'Plan: pro' }, 'book-1')
 ```
 
+## Structured tool results (0.1.11)
+
+`runDurable` answers the tools an agent asked for with a text message the model reads, and now also sends the same results as the `results` field of the wake: `[{ seq, result }]`, where `seq` is the action's `seq` and `result` is exactly what the tool returned (or the `{ error }` object when it threw). The API journals each as the real result of that call. The first wake of a run has none, and a result the ledger already held is sent again like the others. Pass `structuredResults: false` to send the text only. If the API you talk to does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, add `results` to the body next to the `message`, never with `fire_due`, at most 100 entries.
+
 ## Waking on a schedule (handleDue)
 
 Create a recurring schedule or a one-shot timer, and read what is due:
