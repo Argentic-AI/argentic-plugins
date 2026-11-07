@@ -70,9 +70,22 @@ class ParityTest(unittest.TestCase):
     def test_the_same_run_options(self):
         # camelCase option in TypeScript, snake_case here
         for ts_name, py_name in [("runId", "run_id"), ("ledgerPath", "ledger_path"), ("maxSteps", "max_steps"), ("limits", "limits"),
-                                 ("onWakeStart", "on_wake_start"), ("onWake", "on_wake"), ("crashAfterActions", "crash_after_actions")]:
+                                 ("onWakeStart", "on_wake_start"), ("onWake", "on_wake"), ("crashAfterActions", "crash_after_actions"),
+                                 ("structuredResults", "structured_results")]:
             self.assertIn(ts_name, self.ts)
             self.assertIn(py_name, inspect.signature(core.run_durable).parameters)
+
+    def test_the_same_structured_results_field_and_fallback(self):
+        py = open(core.__file__).read()
+        self.assertIn("results?: { seq: number; result: unknown }[]", self.ts)
+        self.assertIn("results: list[Mapping[str, Any]] | None = None", py)
+        # both refuse-and-resend on a 400 whose detail names `results`
+        self.assertIn("e.status !== 400", self.ts)
+        self.assertIn("e.status != 400", py)
+        self.assertIn(".includes('results')", self.ts)
+        self.assertIn('"results" in', py)
+        self.assertIn("opts.structuredResults ?? true", self.ts)
+        self.assertIn("structured_results: bool = True", py)
 
     def test_the_same_statuses_and_the_same_message_to_carry_on(self):
         for status in ("done", "spend_cap", "budget_cap", "turn_cap", "time_cap", "error", "approval_required"):

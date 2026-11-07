@@ -82,6 +82,8 @@ Run it again after a crash and it resumes. `model` defaults to `FREE_MODEL`; `mo
 
 Hooks on `run_durable`: `on_wake_start(step)` just before each wake is sent, `on_wake(step, wake_id, status, replayed)` after each answer, and `on_action(seq, tool, result, fresh)` for every action (`fresh` is False for one the ledger says already finished).
 
+Each follow-up wake also sends the tool results as the `results` field, `[{"seq": n, "result": ...}]`, next to the message text the model reads, so the API journals the real result of every call (0.1.8). The first wake has none, and a result the ledger already held is sent again like the others. Pass `structured_results=False` to `run_durable` for the text only. If the API does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, pass `results=[...]` with the `message`, never with `fire_due`, at most 100 entries.
+
 ## Waking on a schedule (handle_due)
 
 Create a recurring schedule or a one-shot timer, and read what is due:
