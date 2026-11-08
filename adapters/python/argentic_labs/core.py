@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, TypedDict
 
-__version__ = "0.1.6"
+__version__ = "0.1.8"
 
 DEFAULT_BASE_URL = "https://api.getargentic.com"
 BACKOFF = (1, 2, 4, 8)  # waits between the 5 tries on 5xx or network errors
@@ -72,6 +72,14 @@ class ArgenticError(Exception):
         super().__init__(message)
         self.status = status
         self.body = body
+
+
+def _refuses_results(e: ArgenticError) -> bool:
+    """True for a 400 whose detail names `results`: a server that does not know the field yet (strict body validation)."""
+    if e.status != 400 or not isinstance(e.body, dict) or e.body.get("detail") is None:
+        return False
+    detail = e.body["detail"]
+    return "results" in (detail if isinstance(detail, str) else json.dumps(detail))
 
 
 def hint_for(e: BaseException) -> str | None:
@@ -153,6 +161,7 @@ class Argentic:
         self.max_queued_waits = max_queued_waits
         self._sleep = sleep
         self._log = log
+        self._results_refused = False  # set once a server refuses `results` as an unknown field
 
     # One HTTP call. Returns (status, headers, parsed body). Never raises on HTTP errors.
     def _post(
@@ -232,11 +241,20 @@ class Argentic:
         limits: Mapping[str, Any] | None = None,
         fire_due: bool = False,
         memory: str | None = None,
+        context: str | None = None,
+        tool_choice: str | Mapping[str, Any] | None = None,
+        results: list[Mapping[str, Any]] | None = None,
     ) -> WakeResponse:
         """Wake an agent with a message, or with `fire_due=True` and no message for the plans, schedules and timers that
         have fallen due (the API refuses both together). `memory` picks one of the agent's memories. Safe to call again
         with the same key: a queued (409) answer waits and resends, a 5xx or network error retries with backoff, and a
-        reused key with a different body raises."""
+        reused key with a different body raises.
+
+        `results` is what your app's tools returned for the `actions` of the previous wake, as `{"seq": n, "result": ...}`
+        entries (`seq` is the action's `seq`, `result` exactly what the tool returned). The API journals each as the real
+        result of that call. Send it together with a `message`, never with `fire_due`; at most 100 entries. A server that
+        does not know the field yet answers 400 and names `results`: the same wake then goes out once more under the same
+        key without it, and this client leaves `results` out from then on."""
         body: dict[str, Any] = {"model": model}
         if message is not None:
             body["message"] = message
@@ -246,14 +264,29 @@ class Argentic:
             body["memory"] = memory
         if system:
             body["system"] = system
+        if context:
+            body["context"] = context  # facts for this call only; not written to the journal or memory
         if tools:
             body["tools"] = tools
+        if tool_choice is not None:
+            body["tool_choice"] = tool_choice  # "auto", "required" or {"type": "tool", "name": ...}
         if limits:
             body["limits"] = limits
         headers = {"Idempotency-Key": idempotency_key}
         if self.model_key:
             headers["X-Model-Key"] = self.model_key
-        hdrs, data = self._send("wake", f"/v1/agents/{urllib.parse.quote(agent, safe='')}/wake", body, headers)
+        path = f"/v1/agents/{urllib.parse.quote(agent, safe='')}/wake"
+        if results is not None and not self._results_refused:
+            try:
+                hdrs, data = self._send("wake", path, {**body, "results": list(results)}, headers)
+            except ArgenticError as e:
+                if not _refuses_results(e):
+                    raise
+                self._results_refused = True
+                self._log("  the API does not take structured results yet; sending the message text only")
+                hdrs, data = self._send("wake", path, body, headers)
+        else:
+            hdrs, data = self._send("wake", path, body, headers)
         return WakeResponse(
             status=data.get("status", ""),
             reply=data.get("reply") or "",
@@ -302,6 +335,17 @@ class Argentic:
             body["enabled"] = enabled
         _, data = self._send("put_schedule", self._schedule_path(agent, name, memory), body, {}, "PUT")
         return data.get("schedule") or {}
+
+    def put_tools(self, agent: str, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Declare an agent's tools once (at most 32). A wake that sends no `tools` uses them; one that does uses those
+        instead. Replaces what was stored; an empty list clears it. Returns the stored tools."""
+        _, data = self._send("put_tools", f"/v1/agents/{urllib.parse.quote(agent, safe='')}/tools", {"tools": tools}, {}, "PUT")
+        return data.get("tools") or []
+
+    def get_tools(self, agent: str) -> list[dict[str, Any]]:
+        """The tools stored for an agent with put_tools(), or an empty list."""
+        _, data = self._send("get_tools", f"/v1/agents/{urllib.parse.quote(agent, safe='')}/tools", None, {}, "GET")
+        return data.get("tools") or []
 
     def schedules(self, agent: str, memory: str | None = None) -> list[dict[str, Any]]:
         """The schedules and timers of one agent."""
@@ -646,6 +690,7 @@ def run_durable(
     crash_after_actions: int | None = None,
     crash: Callable[[], None] = _kill_self,
     log: Callable[[str], None] = print,
+    structured_results: bool = True,
 ) -> RunResult:
     """Run a task to the end. Start it again after a crash and it resumes
     without repeating a finished action. Actions cut off mid-run run again,
@@ -654,7 +699,11 @@ def run_durable(
     `model` defaults to FREE_MODEL. Hooks: `on_wake_start(step)` just before each wake is sent (the first answer can
     take several seconds), `on_wake(step, wake_id, status, replayed)` after each answer, where `replayed` means the
     API sent back its stored answer or the ledger kept a stopped one, and `on_action(seq, tool, result, fresh)` for
-    every action, `fresh` being False for one the ledger says already finished, which is not run again."""
+    every action, `fresh` being False for one the ledger says already finished, which is not run again.
+
+    Each follow-up wake carries the tool results as the message text and, unless `structured_results=False`, as the
+    structured `results` field too, so the API journals the real result of every call (a server that does not know
+    the field is detected once and not sent it again)."""
     ledger = Ledger(ledger_path)
     by_name = {t.name: t for t in tools}
     declared = [{"name": t.name, "description": t.description or t.name,
@@ -681,6 +730,7 @@ def run_durable(
             resp = client.wake(
                 agent, message, model=model or FREE_MODEL, idempotency_key=key,
                 system=system, tools=declared, limits=limits,
+                results=[{"seq": p["seq"], "result": p["result"]} for p in previous] if structured_results and step > 0 and previous else None,
             )
             if resp.status in _CARRIES_ON and resp.actions:
                 ledger.put_wake(key, {k: v for k, v in vars(resp).items() if k != "replayed"})

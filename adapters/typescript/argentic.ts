@@ -33,6 +33,12 @@ export interface ToolDecl {
    * number, integer or boolean parameter of this tool. Left out, nothing about the tool request changes.
    */
   once_per?: string
+  /**
+   * Leave this tool out of the prompt. The agent finds it by describing what it needs (`find_tools`) and calls it through
+   * `use_tool`; the call still comes back in `actions` as this tool. Worth it from about ten tools or ten thousand tokens of
+   * schemas. Not allowed on a tool that waits for a person or is named in `tool_choice`.
+   */
+  defer_loading?: true
 }
 
 const propKeys = ['type', 'description', 'enum'] as const
@@ -114,8 +120,20 @@ export interface WakeBody {
   memory?: string
   model: ModelSpec
   system?: string
+  /** Facts for this call only (opening hours, the signed-in user's plan), up to 16,000 characters. Not written to the journal or memory; send it again on the next call if the agent still needs it. */
+  context?: string
   tools?: ToolDecl[]
+  /** Whether this call must end with a call to one of your tools. `auto` (default), `required`, or `{ type: 'tool', name }`. */
+  tool_choice?: 'auto' | 'required' | { type: 'tool'; name: string }
   limits?: { max_usd?: number; max_turns?: number }
+  /**
+   * What your app's tools returned for the `actions` of the previous wake, as `{ seq, result }`: `seq` is the action's
+   * `seq` and `result` is exactly what the tool returned. The API journals each as the real result of that call. Send it
+   * together with a `message` (the text the model reads), never with `fire_due`; at most 100 entries. A server that does
+   * not know the field yet refuses it, and `wake()` then sends the same wake again without it and stops sending it on
+   * this client.
+   */
+  results?: { seq: number; result: unknown }[]
 }
 
 export interface Action {
@@ -160,6 +178,14 @@ export class ArgenticError extends Error {
     super(message)
     this.name = 'ArgenticError'
   }
+}
+
+/** True for a 400 whose detail names `results`: a server that does not know the field yet (strict body validation). */
+function refusesResults(e: unknown): boolean {
+  if (!(e instanceof ArgenticError) || e.status !== 400) return false
+  const detail = (e.body as { detail?: unknown } | undefined)?.detail
+  if (detail === undefined) return false
+  return (typeof detail === 'string' ? detail : JSON.stringify(detail)).includes('results')
 }
 
 /** A next step for an error a first run tends to hit, or undefined. Examples print it instead of a stack trace. */
@@ -249,6 +275,8 @@ export class Argentic {
   private readonly backoffMs: number[]
   private readonly maxQueuedWaits: number
   private readonly sleep: (ms: number) => Promise<void>
+  /** Set once a server has refused `results` as an unknown field; later wakes of this client leave it out. */
+  private resultsRefused = false
 
   constructor(opts: ClientOptions = {}) {
     this.apiKey = opts.apiKey ?? process.env.ARGENTIC_API_KEY ?? ''
@@ -264,7 +292,9 @@ export class Argentic {
   /**
    * Wake an agent with a message. Safe to call again with the same key:
    * a queued (409) answer waits and resends, a 5xx or network error retries
-   * with backoff, and a reused key with a different body throws.
+   * with backoff, and a reused key with a different body throws. If the server answers 400 and names `results`, it does
+   * not know that field yet: the same wake goes out once more under the same key without `results`, and this client leaves
+   * `results` out from then on.
    */
   async wake(agent: string, body: WakeBody, idempotencyKey: string): Promise<WakeResult> {
     const headers: Record<string, string> = {
@@ -273,7 +303,20 @@ export class Argentic {
       'Idempotency-Key': idempotencyKey,
     }
     if (this.modelKey) headers['X-Model-Key'] = this.modelKey
-    const res = await this.send(`/v1/agents/${encodeURIComponent(agent)}/wake`, JSON.stringify(body), headers)
+    const path = `/v1/agents/${encodeURIComponent(agent)}/wake`
+    const { results, ...plain } = body
+    let res: Response
+    if (results === undefined || this.resultsRefused) {
+      res = await this.send(path, JSON.stringify(plain), headers)
+    } else {
+      try {
+        res = await this.send(path, JSON.stringify(body), headers)
+      } catch (e) {
+        if (!refusesResults(e)) throw e
+        this.resultsRefused = true
+        res = await this.send(path, JSON.stringify(plain), headers)
+      }
+    }
     const json = (await res.json()) as Omit<WakeResult, 'idempotentReplay'>
     return { ...json, idempotentReplay: res.headers.get('Idempotent-Replay') === 'true' }
   }
@@ -316,6 +359,26 @@ export class Argentic {
   /** Delete a schedule or timer. Throws a 404 ArgenticError if it does not exist. */
   async deleteSchedule(agent: string, name: string, opts: { memory?: string } = {}): Promise<void> {
     await this.send(this.schedulePath(agent, name, opts.memory), undefined, this.plainHeaders(), 'DELETE')
+  }
+
+  /**
+   * Declare an agent's tools once (at most 32). A wake that sends no `tools` uses them; a wake that does send `tools` uses
+   * those instead. Replaces what was stored; an empty list clears it. Returns the stored tools.
+   */
+  async putTools(agent: string, tools: ToolDecl[]): Promise<ToolDecl[]> {
+    const res = await this.send(
+      `/v1/agents/${encodeURIComponent(agent)}/tools`,
+      JSON.stringify({ tools }),
+      { ...this.plainHeaders(), 'Content-Type': 'application/json' },
+      'PUT',
+    )
+    return ((await res.json()) as { tools?: ToolDecl[] }).tools ?? []
+  }
+
+  /** The tools stored for an agent with putTools(), or an empty list. */
+  async tools(agent: string): Promise<ToolDecl[]> {
+    const res = await this.send(`/v1/agents/${encodeURIComponent(agent)}/tools`, undefined, this.plainHeaders(), 'GET')
+    return ((await res.json()) as { tools?: ToolDecl[] }).tools ?? []
   }
 
   /** Where Argentic posts a signed `agent.due` notice (https, port 443, a public host), or null to stop the notices and keep polling due(). Returns the stored address. */
@@ -629,6 +692,11 @@ export interface RunOptions {
   onWake?: (info: { step: number; wakeId: string; status: WakeStatus; replayed: boolean }) => void
   /** Kill this process hard after the Nth newly executed action (to try a crash). */
   crashAfterActions?: number
+  /**
+   * Send each follow-up wake's tool results as the structured `results` field as well as in the message text, so the API
+   * journals the real result of every call. Default true. Set false to send the text only.
+   */
+  structuredResults?: boolean
   log?: (line: string) => void
 }
 
@@ -668,10 +736,13 @@ export async function runDurable(opts: RunOptions): Promise<RunResult> {
   let status: RunResult['status'] = 'max_steps'
   let steps = 0
   let executed = 0
+  const structured = opts.structuredResults ?? true
+  let pending: { seq: number; result: unknown }[] = []
 
   for (let step = 0; step < maxSteps; step++) {
     const key = safeKey(`${opts.runId}.${step}`)
     const body: WakeBody = { message, model, tools: decls }
+    if (structured && step > 0 && pending.length) body.results = pending
     opts.onWakeStart?.({ step })
     if (opts.system) body.system = opts.system
     if (opts.limits) body.limits = opts.limits
@@ -727,6 +798,7 @@ export async function runDurable(opts: RunOptions): Promise<RunResult> {
 
     if (actions.length === 0 || !(res.status === 'done' || carriesOn(res.status))) break
     message = 'Results of the tools you asked for:\n' + JSON.stringify(results)
+    pending = results.map(({ seq, result }) => ({ seq, result }))
   }
 
   return { reply, wakes, steps, status, spentUsd }

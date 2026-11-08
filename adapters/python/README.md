@@ -1,6 +1,6 @@
 # argentic-labs
 
-Argentic client for Python. Argentic runs your agent's loop: it calls the model, keeps the journal, and hands each tool call back to your code as an action with a stable key. Kill your process mid-run and start it again: it resumes without repeating a finished action, and the run keeps proof of what ran.
+Argentic client for Python. Argentic runs your agent's loop: it calls the model, keeps the journal, and hands each tool call back to your code as an action with a stable key. Each turn it rebuilds the prompt from the journal (state blocks plus a recent tail of about 40K tokens) instead of replaying an ever-growing transcript, and the journal keeps the full record. Kill your process mid-run and start it again: it resumes without repeating a finished action.
 
 The package is the client and `run_durable`, with no dependencies (Python 3.10+), plus three adapters that take the tools you already wrote:
 
@@ -81,6 +81,8 @@ Run it again after a crash and it resumes. `model` defaults to `FREE_MODEL`; `mo
 `client.replay(agent, wake_id)` re-renders a wake's prompts from the journal and compares them to what the model was shown. It calls no model and spends nothing. The answer always has `turns`, `matched`, `mismatched` and `unverifiable`, and `summarize_replay(result)` gives one line.
 
 Hooks on `run_durable`: `on_wake_start(step)` just before each wake is sent, `on_wake(step, wake_id, status, replayed)` after each answer, and `on_action(seq, tool, result, fresh)` for every action (`fresh` is False for one the ledger says already finished).
+
+Each follow-up wake also sends the tool results as the `results` field, `[{"seq": n, "result": ...}]`, next to the message text the model reads, so the API journals the real result of every call (0.1.8). The first wake has none, and a result the ledger already held is sent again like the others. Pass `structured_results=False` to `run_durable` for the text only. If the API does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, pass `results=[...]` with the `message`, never with `fire_due`, at most 100 entries.
 
 ## Waking on a schedule (handle_due)
 

@@ -2,7 +2,9 @@
 
 Argentic runs the agent loop. Your Vercel AI SDK or Mastra tools and system prompt carry over; the framework's own loop (`generateText`, `Agent`, Mastra `Agent.generate`) is not used.
 
-Each tool call the agent makes comes back to your code to carry out. If the process dies mid-run, run it again: it resumes without repeating a finished action, and the run keeps proof of what ran.
+Each turn, Argentic rebuilds the prompt from a journal of the run instead of replaying an ever-growing transcript: state blocks plus a recent tail of about 40K tokens. The journal keeps the full record, so you can see every step the agent took and check it against what the model saw.
+
+Each tool call the agent makes comes back to your code to carry out. If the process dies mid-run, run it again: it resumes without repeating a finished action.
 
 ## Try it
 
@@ -55,6 +57,19 @@ Keep `agent` and `runId` the same across restarts. A request that takes longer t
 
 A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one. Set it on a `DurableTool` directly, or pass `{ oncePer: { refund_order: 'refund:{order_id}' } }` as the second argument to `fromAiSdkTools` or `fromMastraTools`. The template is checked before the request is sent. See [TOOLS.md](TOOLS.md#declaring-a-tool-once_per). 0.1.6 and earlier dropped the field.
 
+## Tools, context and deferred loading (0.1.10)
+
+Declare an agent's tools once with `client.putTools(agent, tools)` and leave `tools` out of later wakes; `client.tools(agent)` reads them back. A wake can also carry `context` (facts for that call only, such as the signed-in user's plan; it is not written to the journal) and `tool_choice` (`'auto'`, `'required'` or `{ type: 'tool', name }`). On a tool, `defer_loading: true` keeps its schema out of the prompt until the agent looks it up, which pays off from about ten tools.
+
+```ts
+await client.putTools('support-bot', [{ name: 'book_slot', description: 'Book a slot.', parameters: { type: 'object', properties: { day: { type: 'string' } }, required: ['day'] } }])
+const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: freeModel, context: 'Plan: pro' }, 'book-1')
+```
+
+## Structured tool results (0.1.11)
+
+`runDurable` answers the tools an agent asked for with a text message the model reads, and now also sends the same results as the `results` field of the wake: `[{ seq, result }]`, where `seq` is the action's `seq` and `result` is exactly what the tool returned (or the `{ error }` object when it threw). The API journals each as the real result of that call. The first wake of a run has none, and a result the ledger already held is sent again like the others. Pass `structuredResults: false` to send the text only. If the API you talk to does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, add `results` to the body next to the `message`, never with `fire_due`, at most 100 entries.
+
 ## Waking on a schedule (handleDue)
 
 Create a recurring schedule or a one-shot timer, and read what is due:
@@ -69,7 +84,7 @@ await client.deleteSchedule('support-bot', 'follow-up')
 ```
 
 
-Beta, and off by default on the hosted API. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
+Beta, off by default on the hosted API, and open to single beta users only for now. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
 
 Register the address and read the secret with the client: `await client.setWakeUrl('https://app.example.com/argentic/due')`, then `(await client.notices()).signing_secret` (`whsec_...`). Store it like a password, for example as `ARGENTIC_WEBHOOK_SECRET`. The model key stays on your server: set `MODEL_KEY` there, as for any other wake.
 
