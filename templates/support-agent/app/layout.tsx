@@ -5,7 +5,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Support agent that survives a kill',
-  description: 'A Next.js support agent that sends one email. Kill it mid-run and it resumes without sending twice. Built on the Vercel AI SDK and Argentic.',
+  description: 'A Next.js support agent that sends one email, built on the Vercel AI SDK and Argentic. Kill it mid-run and it resumes without sending twice.',
 }
 export const viewport: Viewport = { colorScheme: 'light dark' }
 
