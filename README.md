@@ -35,7 +35,7 @@ A small support agent refunds an order, emails the customer and closes the ticke
 ## Claude Code
 
 ```
-claude plugin marketplace add Argentic-Labs-AI/argentic-plugins
+claude plugin marketplace add Argentic-AI/argentic-plugins
 claude plugin install argentic@argentic
 ```
 
@@ -53,7 +53,7 @@ Then run `/mcp` to sign in.
 
 Customize, Connectors, Add custom connector, URL `https://getargentic.com/mcp`. Under Request headers add `x-api-key` with your model key (only needed to wake agents). Claude only sends header names Anthropic has approved, and `X-Model-Key` is not one, so use `x-api-key`: Argentic reads it as the model key. Request headers is a beta that not every account has yet; if you don't see it, the connector still signs in and reads, and you wake agents from Claude Code or Codex. Sign in and pick your organization. Disconnect any time in your Argentic settings.
 
-For the skills: Customize, Plugins, the + next to Personal plugins, Add marketplace, From a repository, `Argentic-Labs-AI/argentic-plugins`.
+For the skills: Customize, Plugins, the + next to Personal plugins, Add marketplace, From a repository, `Argentic-AI/argentic-plugins`.
 
 ## Cursor
 
@@ -68,7 +68,7 @@ Cursor opens the sign-in when you enable the server.
 ## Codex
 
 ```
-codex plugin marketplace add Argentic-Labs-AI/argentic-plugins
+codex plugin marketplace add Argentic-AI/argentic-plugins
 ```
 
 That adds the skills. Add the MCP to `~/.codex/config.toml`:

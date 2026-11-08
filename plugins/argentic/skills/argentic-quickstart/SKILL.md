@@ -29,15 +29,15 @@ Rules:
 
    | They use | Client | Example |
    |---|---|---|
-   | TypeScript, no framework | `npm i @argentic-labs/client` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/core |
-   | Vercel AI SDK | `@argentic-labs/client/ai-sdk` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/ai-sdk |
-   | Mastra | `@argentic-labs/client/mastra` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/mastra |
-   | Python, no framework | `argentic-labs` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/core |
-   | LangChain or LangGraph | `argentic_labs.langchain` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/langchain |
-   | OpenAI Agents SDK | `argentic_labs.openai_agents` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/openai-agents |
-   | Pydantic AI | `argentic_labs.pydantic_ai` | https://github.com/Argentic-Labs-AI/argentic-plugins/tree/main/examples/pydantic-ai |
+   | TypeScript, no framework | `npm i @argentic-labs/client` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/core |
+   | Vercel AI SDK | `@argentic-labs/client/ai-sdk` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/ai-sdk |
+   | Mastra | `@argentic-labs/client/mastra` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/mastra |
+   | Python, no framework | `argentic-labs` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/core |
+   | LangChain or LangGraph | `argentic_labs.langchain` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/langchain |
+   | OpenAI Agents SDK | `argentic_labs.openai_agents` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/openai-agents |
+   | Pydantic AI | `argentic_labs.pydantic_ai` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/pydantic-ai |
 
-   The TypeScript client needs Node 22 or newer. The Python client needs 3.10 or newer. The Python package may not be on PyPI yet. If `pip install argentic-labs` fails, use `pip install "argentic-labs @ git+https://github.com/Argentic-Labs-AI/argentic-plugins@main#subdirectory=adapters/python"`.
+   The TypeScript client needs Node 22 or newer. The Python client needs 3.10 or newer. The Python package may not be on PyPI yet. If `pip install argentic-labs` fails, use `pip install "argentic-labs @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"`.
 4. Install the client. Use the project's own package manager.
 5. Write the smallest working call. Do not invent names: read the client source for the exact ones. It is in this repo under `adapters/typescript/argentic.ts` and `adapters/python/argentic_labs/core.py`. The names as of client 0.1.6:
 

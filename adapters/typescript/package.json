@@ -33,7 +33,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Argentic-Labs-AI/argentic-plugins.git",
+    "url": "git+https://github.com/Argentic-AI/argentic-plugins.git",
     "directory": "adapters/typescript"
   },
   "homepage": "https://getargentic.com/docs",

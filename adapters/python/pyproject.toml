@@ -38,8 +38,8 @@ argentic-labs = "argentic_labs.cli:main"
 [project.urls]
 Homepage = "https://getargentic.com"
 Documentation = "https://getargentic.com/docs/client/"
-Repository = "https://github.com/Argentic-Labs-AI/argentic-plugins"
-Issues = "https://github.com/Argentic-Labs-AI/argentic-plugins/issues"
+Repository = "https://github.com/Argentic-AI/argentic-plugins"
+Issues = "https://github.com/Argentic-AI/argentic-plugins/issues"
 Changelog = "https://getargentic.com/changelog/"
 
 [tool.hatch.build.targets.wheel]
