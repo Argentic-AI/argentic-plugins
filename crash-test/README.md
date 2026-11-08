@@ -30,7 +30,7 @@ You need Node 22+ and git. The examples use a scripted model, so nothing here ca
 ### 1. Get the examples
 
 ```
-git clone https://github.com/Argentic-Labs-AI/argentic-plugins
+git clone https://github.com/Argentic-AI/argentic-plugins
 cd argentic-plugins/crash-test
 node crash-test.mjs --help
 ```

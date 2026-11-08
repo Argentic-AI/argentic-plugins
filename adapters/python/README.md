@@ -22,7 +22,7 @@ pip install "argentic-labs[langchain]"      # or [openai-agents], [pydantic-ai]
 Straight from GitHub, if you want the latest code or a pinned tag (swap `main` for a tag such as `npm-v0.1.4`):
 
 ```
-pip install "argentic-labs @ git+https://github.com/Argentic-Labs-AI/argentic-plugins@main#subdirectory=adapters/python"
+pip install "argentic-labs @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"
 ```
 
 You need an Argentic API key from https://getargentic.com/platform and a model key. The default model is a free NVIDIA one; a key is at https://build.nvidia.com. Argentic is free in beta.
@@ -138,4 +138,4 @@ LangChain tools are called the way a LangGraph `ToolNode` calls them, with that 
 
 OpenAI Agents SDK tools are called through their own `on_invoke_tool`, with that key as the SDK `ctx.tool_call_id`. Each tool call runs on its own event loop, so call `run_durable` from sync code.
 
-Docs: https://getargentic.com/docs/client/. Source and issues: https://github.com/Argentic-Labs-AI/argentic-plugins.
+Docs: https://getargentic.com/docs/client/. Source and issues: https://github.com/Argentic-AI/argentic-plugins.

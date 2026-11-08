@@ -8,7 +8,7 @@
     "url": "https://getargentic.com"
   },
   "homepage": "https://getargentic.com/docs",
-  "repository": "https://github.com/Argentic-Labs-AI/argentic-plugins",
+  "repository": "https://github.com/Argentic-AI/argentic-plugins",
   "license": "MIT",
   "keywords": ["agents", "memory", "mcp", "argentic"],
   "logo": "assets/logo.png",

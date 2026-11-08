@@ -4,7 +4,7 @@ A Next.js support agent that reads a ticket, looks up the order and sends one em
 
 It is built on the [Vercel AI SDK](https://ai-sdk.dev): the two tools are ordinary `tool()` objects. [Argentic](https://getargentic.com/docs) runs the agent loop, journals every step and hands each tool call back to your code as an action with a stable key.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FArgentic-Labs-AI%2Fargentic-plugins%2Ftree%2Fmain%2Ftemplates%2Fsupport-agent&project-name=argentic-support-agent&repository-name=argentic-support-agent&env=ARGENTIC_API_KEY&envDescription=Your%20Argentic%20API%20key%20%28aek_...%29.%20Make%20one%20at%20getargentic.com%2Fplatform%20under%20Keys.&envLink=https%3A%2F%2Fgetargentic.com%2Fplatform)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FArgentic-AI%2Fargentic-plugins%2Ftree%2Fmain%2Ftemplates%2Fsupport-agent&project-name=argentic-support-agent&repository-name=argentic-support-agent&env=ARGENTIC_API_KEY&envDescription=Your%20Argentic%20API%20key%20%28aek_...%29.%20Make%20one%20at%20getargentic.com%2Fplatform%20under%20Keys.&envLink=https%3A%2F%2Fgetargentic.com%2Fplatform)
 
 ## What you need
 

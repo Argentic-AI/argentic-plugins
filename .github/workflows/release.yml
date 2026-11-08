@@ -1,6 +1,6 @@
 # Release only. Publishes a package when its version is new, with no tokens: npm and PyPI
 # both trust this workflow by its repository, file name and environment, so keep the file
-# name and the `npm` / `pypi` environments (see release/package-publishing.md).
+# name and the `npm` / `pypi` environments.
 #
 # Three ways in, one run each:
 #   - Merge to main a change to the version in adapters/typescript/package.json or
@@ -9,8 +9,11 @@
 #   - Run it by hand (Actions, release, Run workflow) and pick the package: same check.
 #   - Push a tag npm-v0.1.0 / py-v0.1.0 yourself: publishes that tag, as before.
 # Tags made here use GITHUB_TOKEN, which starts no new workflow run, so nothing publishes twice.
-# If the GitHub org or repo is renamed, update the trusted publisher entries on npmjs.com
-# and pypi.org to match.
+# If the GitHub org or repo is renamed (last: Argentic-Labs-AI -> Argentic-AI), three things must
+# change together or the next publish fails: the trusted publisher entries on npmjs.com (one per
+# package) and pypi.org, every `repository.url` in the package.json / pyproject.toml files (npm
+# provenance rejects a mismatch with the repo the workflow runs in), and the `io.github.<org>/`
+# prefix of `name` in server.json (the MCP Registry checks it against the OIDC repository owner).
 name: release
 
 on:

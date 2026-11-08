@@ -23,7 +23,7 @@ Agent tools: `argentic_wake`, `argentic_fire_due`, `argentic_resume`, `argentic_
 Claude Code:
 
 ```
-claude plugin marketplace add Argentic-Labs-AI/argentic-plugins
+claude plugin marketplace add Argentic-AI/argentic-plugins
 claude plugin install argentic@argentic
 ```
 
