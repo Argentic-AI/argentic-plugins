@@ -12,7 +12,7 @@ Each tool call the agent makes comes back to your code to carry out. If the proc
 npx @argentic-labs/client demo
 ```
 
-Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run it again, and it skips what already finished. Details in the [repo README](../../README.md#kill-it-mid-run-2-minutes).
+Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run it again, and it skips what already finished. Details in the [repo README](../../README.md#run-the-demo-2-minutes).
 
 ## Install
 
