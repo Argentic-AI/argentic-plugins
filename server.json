@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Argentic-AI/argentic",
   "title": "Argentic",
-  "description": "Argentic MCP server: run and inspect long-running agents on Argentic.",
-  "version": "0.3.2",
+  "description": "Run agents for hours. Argentic keeps their context sharp and records every step.",
+  "version": "0.3.3",
   "websiteUrl": "https://getargentic.com",
   "repository": {
     "url": "https://github.com/Argentic-AI/argentic-plugins",
