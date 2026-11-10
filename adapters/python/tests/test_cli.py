@@ -1,4 +1,4 @@
-"""`python -m argentic_labs demo`, as a real process: killed after the first action, then run again.
+"""`python -m argentic_ai demo`, as a real process: killed after the first action, then run again.
 
 Run from adapters/python: python -m unittest discover -s tests -v
 """
@@ -29,7 +29,7 @@ class DemoTest(unittest.TestCase):
         self.env.pop("ARGENTIC_MODEL_ID", None)
 
     def demo(self, *args, env=None):
-        return subprocess.run([sys.executable, "-m", "argentic_labs", "demo", *args], cwd=self.tmp.name, env=env or self.env,
+        return subprocess.run([sys.executable, "-m", "argentic_ai", "demo", *args], cwd=self.tmp.name, env=env or self.env,
                               capture_output=True, text=True, timeout=60)
 
     def outbox(self):
@@ -86,10 +86,10 @@ class DemoTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.tmp.name, ".argentic-demo")))
 
     def test_usage_and_unknown_commands(self):
-        ok = subprocess.run([sys.executable, "-m", "argentic_labs", "--help"], env=self.env, capture_output=True, text=True)
+        ok = subprocess.run([sys.executable, "-m", "argentic_ai", "--help"], env=self.env, capture_output=True, text=True)
         self.assertEqual(ok.returncode, 0)
-        self.assertIn("Usage: argentic-labs demo", ok.stdout)
-        bad = subprocess.run([sys.executable, "-m", "argentic_labs", "nope"], env=self.env, capture_output=True, text=True)
+        self.assertIn("Usage: argentic-ai demo", ok.stdout)
+        bad = subprocess.run([sys.executable, "-m", "argentic_ai", "nope"], env=self.env, capture_output=True, text=True)
         self.assertEqual(bad.returncode, 1)
 
     def test_a_401_prints_the_hint_not_a_traceback(self):

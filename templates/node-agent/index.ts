@@ -1,8 +1,8 @@
 // A support agent that sends one email. Press Ctrl-C while it works, run it again, and it does not send twice.
 // Argentic runs the loop and keeps the journal; the tools are ordinary Vercel AI SDK tool() objects.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { Argentic, hintFor, runDurable } from '@argentic-labs/client'
-import { fromAiSdkTools } from '@argentic-labs/client/ai-sdk'
+import { Argentic, hintFor, runDurable } from '@argentic-ai/client'
+import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'
 import { tool } from 'ai'
 import { z } from 'zod'
 

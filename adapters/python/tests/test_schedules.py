@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_labs import Argentic, ArgenticError  # noqa: E402
+from argentic_ai import Argentic, ArgenticError  # noqa: E402
 from fake_server import serve  # noqa: E402
 
 SCHED = {"name": "daily", "cron": "0 9 * * *", "message": "check", "enabled": True, "next_at": "2026-11-07T09:00:00.000Z", "last_fired_at": None, "fires": 0}

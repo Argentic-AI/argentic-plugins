@@ -1,4 +1,4 @@
-"""`python -m argentic_labs demo` (or `argentic-labs demo`): kill an agent mid-run, run it again, and watch it skip what already finished.
+"""`python -m argentic_ai demo` (or `argentic-ai demo`): kill an agent mid-run, run it again, and watch it skip what already finished.
 
 Uses only this package. State lives in ./.argentic-demo/ (the same folder the npm client's demo uses), so a rerun from the same folder picks up the same run.
 """
@@ -27,8 +27,8 @@ TASK = (
     "email the customer that the refund is on its way, then close the ticket. Do one step at a time."
 )
 
-USAGE = """Usage: argentic-labs demo [--fresh] [--kill-after N]
-       python -m argentic_labs demo [--fresh] [--kill-after N]
+USAGE = """Usage: argentic-ai demo [--fresh] [--kill-after N]
+       python -m argentic_ai demo [--fresh] [--kill-after N]
 
   --fresh         start a new run (forget the one in ./.argentic-demo/)
   --kill-after N  kill the process yourself after N actions, instead of pressing Ctrl-C

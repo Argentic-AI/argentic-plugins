@@ -12,7 +12,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "..", "adapters", "python", "tests"))
 
 import refund  # noqa: E402
-from argentic_labs import Argentic  # noqa: E402
+from argentic_ai import Argentic  # noqa: E402
 from fake_server import refund_handler, serve  # noqa: E402
 
 MODEL = {"provider": "nvidia", "id": "x", "prices": {"in": 0, "out": 0}}
@@ -53,7 +53,7 @@ class RefundTest(unittest.TestCase):
     def test_the_outbox_dedupes_on_the_action_key(self):
         outbox = os.path.join(self.tmp.name, "outbox.jsonl")
         tools = {t.name: t for t in refund.make_tools(outbox)}
-        from argentic_labs import ToolContext
+        from argentic_ai import ToolContext
         for _ in range(2):  # the same action twice, as after a crash before the ledger was written
             tools["refund_order"].execute({"order_id": "1182", "amount_usd": 42}, ToolContext(1, "a:1"))
         self.assertEqual(refund.outbox_counts(outbox)["refund_order"], 1)

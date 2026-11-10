@@ -13,7 +13,7 @@ You need an Argentic API key from https://getargentic.com/platform and a model k
 ```
 export ARGENTIC_API_KEY=aek_...
 export MODEL_KEY=nvapi-...
-npx @argentic-labs/client demo
+npx @argentic-ai/client demo
 ```
 
 fish:
@@ -21,7 +21,7 @@ fish:
 ```
 set -x ARGENTIC_API_KEY aek_...
 set -x MODEL_KEY nvapi-...
-npx @argentic-labs/client demo
+npx @argentic-ai/client demo
 ```
 
 A small support agent refunds an order, emails the customer and closes the ticket, one action every couple of seconds, on a prompt the engine rebuilds at each step. To see what a restart does, press Ctrl-C while it works, then run the same command again from the same folder. The rerun skips the actions that already finished and does the rest. An action you cut off halfway runs again, which is safe because every action carries a stable key. At the end the demo counts what landed in its outbox (one line per action), checks every wake against the journal, and tells you where the run is in the dashboard. Open the run you killed and press Check under Proof of what ran.
@@ -87,7 +87,7 @@ The HTTP API still works on its own: `POST /v1/agents/{agent}/wake` and the othe
 
 ## Bring your own framework
 
-Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Hand the loop to Argentic and keep the tools. [`adapters/`](adapters/) has one small adapter per framework (TypeScript: `npm i @argentic-labs/client`; Python: `argentic-labs`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. Both clients also ship the same demo to try it with nothing to write: `npx @argentic-labs/client demo` or `python -m argentic_labs demo`.
+Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Hand the loop to Argentic and keep the tools. [`adapters/`](adapters/) has one small adapter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. Both clients also ship the same demo to try it with nothing to write: `npx @argentic-ai/client demo` or `python -m argentic_ai demo`.
 
 ## Ask your agent to do it
 

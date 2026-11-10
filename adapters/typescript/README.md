@@ -9,7 +9,7 @@ Each tool call the agent makes comes back to your code to carry out. If the proc
 ## Try it
 
 ```
-npx @argentic-labs/client demo
+npx @argentic-ai/client demo
 ```
 
 Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run it again, and it skips what already finished. Details in the [repo README](../../README.md#run-the-demo-2-minutes).
@@ -17,13 +17,13 @@ Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run i
 ## Install
 
 ```
-npm i @argentic-labs/client
+npm i @argentic-ai/client
 ```
 
-- `@argentic-labs/client`: the client and `runDurable`, no dependencies, Node 22+.
-- `@argentic-labs/client/ai-sdk`: `fromAiSdkTools`, needs `ai` v5, v6 or v7.
-- `@argentic-labs/client/tools`: `toolPack`, retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and a generic HTTP POST. See [TOOLS.md](TOOLS.md).
-- `@argentic-labs/client/mastra`: `fromMastraTools`, takes the `createTool()` tools you would pass to an Agent (the key is the tool name). Needs `@mastra/core` 1.x for the tools; the adapter itself imports nothing.
+- `@argentic-ai/client`: the client and `runDurable`, no dependencies, Node 22+.
+- `@argentic-ai/client/ai-sdk`: `fromAiSdkTools`, needs `ai` v5, v6 or v7.
+- `@argentic-ai/client/tools`: `toolPack`, retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and a generic HTTP POST. See [TOOLS.md](TOOLS.md).
+- `@argentic-ai/client/mastra`: `fromMastraTools`, takes the `createTool()` tools you would pass to an Agent (the key is the tool name). Needs `@mastra/core` 1.x for the tools; the adapter itself imports nothing.
 
 To vendor it instead: clone this repo and copy `argentic.ts`, `ai-sdk.ts` and `mastra.ts` into your project (Node 22+, no package needed beyond what you already use).
 
@@ -32,8 +32,8 @@ To vendor it instead: clone this repo and copy `argentic.ts`, `ai-sdk.ts` and `m
 ```ts
 import { tool } from 'ai'
 import { z } from 'zod'
-import { Argentic, runDurable } from '@argentic-labs/client'
-import { fromAiSdkTools } from '@argentic-labs/client/ai-sdk'
+import { Argentic, runDurable } from '@argentic-ai/client'
+import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'
 
 const tools = { refund_order: tool({
   description: 'Refund an order.',
@@ -90,7 +90,7 @@ Register the address and read the secret with the client: `await client.setWakeU
 
 ```ts
 import { Hono } from 'hono'
-import { handleDueResponse } from '@argentic-labs/client'
+import { handleDueResponse } from '@argentic-ai/client'
 
 const app = new Hono()
 // Reads ARGENTIC_API_KEY, MODEL_KEY and ARGENTIC_WEBHOOK_SECRET from the environment.

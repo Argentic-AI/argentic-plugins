@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_labs import Argentic  # noqa: E402
+from argentic_ai import Argentic  # noqa: E402
 from fake_server import serve  # noqa: E402
 
 TOOL = {"name": "book_slot", "description": "Book a slot.", "parameters": {"type": "object", "properties": {"day": {"type": "string"}}, "required": ["day"]}, "defer_loading": True}

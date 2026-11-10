@@ -1,4 +1,4 @@
-from argentic_labs.core import to_argentic_schema
+from argentic_ai.core import to_argentic_schema
 
 
 def test_flat_schema_is_trimmed_as_before():
