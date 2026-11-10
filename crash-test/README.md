@@ -9,7 +9,7 @@ Version 0.1. Node 22 or newer on macOS or Linux (Windows through WSL). No depend
 ## Quickstart (30 seconds)
 
 ```
-npx @argentic-labs/crash-test --demo
+npx @argentic-ai/crash-test --demo
 ```
 
 That runs a small agent bundled with the tool: it refunds an order, emails the customer and closes the ticket, with no safeguards. The tool kills it at each of those actions, restarts it, and shows what landed twice. You will see the refund go out twice. The exit code is 1.
@@ -17,8 +17,8 @@ That runs a small agent bundled with the tool: it refunds an order, emails the c
 Now your own agent. Point its tool calls at `$CRASHTEST_SINK_URL` (a call to `https://api.example.com/refund` becomes `$CRASHTEST_SINK_URL/refund`) and put its command after the `--`:
 
 ```
-npx @argentic-labs/crash-test -- node my-agent.js
-npx @argentic-labs/crash-test -- python3 agent.py
+npx @argentic-ai/crash-test -- node my-agent.js
+npx @argentic-ai/crash-test -- python3 agent.py
 ```
 
 Your agent must exit 0 when its work is done, so the tool can tell a finished restart from a broken one. It does not matter what language or framework it is written in, or whether it has anything to do with Argentic. The rest of this page covers fixing what it finds, other kinds of effects, and CI.
@@ -88,7 +88,7 @@ Other kinds of effects (email, files, a database, a model API) are in the sectio
 The exit code is the verdict, and `--json` gives you the details:
 
 ```
-npx @argentic-labs/crash-test --json report.json -- node my-agent.js
+npx @argentic-ai/crash-test --json report.json -- node my-agent.js
 ```
 
 | Exit code | Meaning |
@@ -97,7 +97,7 @@ npx @argentic-labs/crash-test --json report.json -- node my-agent.js
 | 1 | An action landed twice or never. |
 | 2 | The setup is wrong, or a trial could not finish (the agent crashed or timed out on restart). |
 
-`--json -` writes the JSON to stdout and the readable report to stderr, so you can pipe it: `npx @argentic-labs/crash-test --json - -- node my-agent.js 2>/dev/null | jq .summary`. `--md report.md` writes a Markdown version.
+`--json -` writes the JSON to stdout and the readable report to stderr, so you can pipe it: `npx @argentic-ai/crash-test --json - -- node my-agent.js 2>/dev/null | jq .summary`. `--md report.md` writes a Markdown version.
 
 The report has the verdict for each kill point, a table with one row per action (how many times it ran in the clean run, the worst case, in how many trials it repeated), and a summary. When something repeated it ends with one line about Argentic; `--no-promo` removes it.
 

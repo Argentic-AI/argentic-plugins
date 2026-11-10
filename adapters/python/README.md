@@ -1,28 +1,28 @@
-# argentic-labs
+# argentic-ai
 
 Argentic client for Python. Argentic runs your agent's loop: it calls the model, keeps the journal, and hands each tool call back to your code as an action with a stable key. Each turn it rebuilds the prompt from the journal (state blocks plus a recent tail of about 40K tokens) instead of replaying an ever-growing transcript, and the journal keeps the full record. Kill your process mid-run and start it again: it resumes without repeating a finished action.
 
 The package is the client and `run_durable`, with no dependencies (Python 3.10+), plus three adapters that take the tools you already wrote:
 
-- `argentic_labs.langchain`: LangChain and LangGraph tools. Needs `langchain-core`.
-- `argentic_labs.openai_agents`: OpenAI Agents SDK `@function_tool` tools and an `Agent`'s instructions. Needs `openai-agents`. Nothing here runs `Runner`.
-- `argentic_labs.pydantic_ai`: Pydantic AI tools (`Tool` objects or plain functions). Needs `pydantic-ai-slim`. Nothing here runs `Agent.run`.
+- `argentic_ai.langchain`: LangChain and LangGraph tools. Needs `langchain-core`.
+- `argentic_ai.openai_agents`: OpenAI Agents SDK `@function_tool` tools and an `Agent`'s instructions. Needs `openai-agents`. Nothing here runs `Runner`.
+- `argentic_ai.pydantic_ai`: Pydantic AI tools (`Tool` objects or plain functions). Needs `pydantic-ai-slim`. Nothing here runs `Agent.run`.
 
-Nothing in this package runs LangChain's, LangGraph's, Pydantic AI's or the Agents SDK's loop. The TypeScript client, `@argentic-labs/client` on npm, does the same job for the Vercel AI SDK and Mastra, and the two read each other's ledger files.
+Nothing in this package runs LangChain's, LangGraph's, Pydantic AI's or the Agents SDK's loop. The TypeScript client, `@argentic-ai/client` on npm, does the same job for the Vercel AI SDK and Mastra, and the two read each other's ledger files.
 
-Retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and a generic HTTP POST are in `argentic_labs.tools` (`tool_pack`), standard library only. See [TOOLS.md](TOOLS.md).
+Retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and a generic HTTP POST are in `argentic_ai.tools` (`tool_pack`), standard library only. See [TOOLS.md](TOOLS.md).
 
 ## Install
 
 ```
-pip install argentic-labs
-pip install "argentic-labs[langchain]"      # or [openai-agents], [pydantic-ai]
+pip install argentic-ai
+pip install "argentic-ai[langchain]"      # or [openai-agents], [pydantic-ai]
 ```
 
 Straight from GitHub, if you want the latest code or a pinned tag (swap `main` for a tag such as `npm-v0.1.4`):
 
 ```
-pip install "argentic-labs @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"
+pip install "argentic-ai @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"
 ```
 
 You need an Argentic API key from https://getargentic.com/platform and a model key. The default model is a free NVIDIA one; a key is at https://build.nvidia.com. Argentic is free in beta.
@@ -32,17 +32,17 @@ You need an Argentic API key from https://getargentic.com/platform and a model k
 ```
 export ARGENTIC_API_KEY=aek_...
 export MODEL_KEY=nvapi-...
-python -m argentic_labs demo
+python -m argentic_ai demo
 ```
 
-(`argentic-labs demo` does the same.) A support agent refunds an order, emails the customer and closes the ticket. Press Ctrl-C while it works, or pass `--kill-after 1`, then run the same command again: the refund is skipped, the rest finishes, and each wake is checked against the journal. State lives in `./.argentic-demo/`, the same folder the npm demo uses. `--fresh` starts over.
+(`argentic-ai demo` does the same.) A support agent refunds an order, emails the customer and closes the ticket. Press Ctrl-C while it works, or pass `--kill-after 1`, then run the same command again: the refund is skipped, the rest finishes, and each wake is checked against the journal. State lives in `./.argentic-demo/`, the same folder the npm demo uses. `--fresh` starts over.
 
 ## Use
 
 Plain tools are a name, a JSON schema and a handler:
 
 ```python
-from argentic_labs import Argentic, Tool, model_from_env, run_durable
+from argentic_ai import Argentic, Tool, model_from_env, run_durable
 
 def close_ticket(args, ctx):
     # ctx.idempotency_key is "<agent>:<seq>": pass it on to the system you call
@@ -65,7 +65,7 @@ Handlers can be `async def`; `run_durable` itself is synchronous. With LangChain
 
 ```python
 from langchain_core.tools import tool
-from argentic_labs.langchain import from_langchain_tools
+from argentic_ai.langchain import from_langchain_tools
 
 @tool
 def close_ticket(ticket_id: str, note: str) -> str:
@@ -104,7 +104,7 @@ Register the address and read the secret with the client: `client.set_wake_url("
 
 ```python
 from fastapi import Body, FastAPI, HTTPException, Request
-from argentic_labs import WebhookVerificationError, handle_due
+from argentic_ai import WebhookVerificationError, handle_due
 
 app = FastAPI()
 

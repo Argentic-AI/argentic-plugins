@@ -3,7 +3,7 @@ import { visitor } from '@/lib/http'
 import { runSession } from '@/lib/run'
 import { loadSession } from '@/lib/session'
 import { store } from '@/lib/store'
-import { hintFor } from '@argentic-labs/client'
+import { hintFor } from '@argentic-ai/client'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300

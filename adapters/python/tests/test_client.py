@@ -12,7 +12,7 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_labs import DEFAULT_BASE_URL, FREE_MODEL, Argentic, ArgenticError, hint_for  # noqa: E402
+from argentic_ai import DEFAULT_BASE_URL, FREE_MODEL, Argentic, ArgenticError, hint_for  # noqa: E402
 from fake_server import serve  # noqa: E402
 
 MODEL = {"provider": "nvidia", "id": "x", "prices": {"in": 0, "out": 0}}
@@ -64,7 +64,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(headers["authorization"], "Bearer aek_test")
         self.assertEqual(headers["x-model-key"], "mk")
         self.assertEqual(headers["idempotency-key"], "k.0")
-        self.assertRegex(headers["user-agent"], r"^argentic-labs-python/\d+\.\d+\.\d+")
+        self.assertRegex(headers["user-agent"], r"^argentic-ai-python/\d+\.\d+\.\d+")
         self.assertEqual(body, {"message": "hello", "model": MODEL})
         self.assertEqual((r.status, r.reply, r.spent_usd, r.turns, r.wake_id, r.replayed), ("done", "hi", 0.5, 2, "wk_1", False))
 

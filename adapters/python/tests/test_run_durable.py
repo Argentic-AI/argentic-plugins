@@ -12,7 +12,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_labs import FREE_MODEL, Argentic, Ledger, Tool, model_from_env, run_durable  # noqa: E402
+from argentic_ai import FREE_MODEL, Argentic, Ledger, Tool, model_from_env, run_durable  # noqa: E402
 from fake_server import REFUND_SCRIPT, refund_handler, serve  # noqa: E402
 
 SCHEMA = {"type": "object", "properties": {}}

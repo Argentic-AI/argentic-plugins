@@ -14,9 +14,9 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from argentic_labs import RetryLater, Tool, ToolContext, run_durable  # noqa: E402
-from argentic_labs.core import Argentic  # noqa: E402
-from argentic_labs.tools import provider_key, tool_pack  # noqa: E402
+from argentic_ai import RetryLater, Tool, ToolContext, run_durable  # noqa: E402
+from argentic_ai.core import Argentic  # noqa: E402
+from argentic_ai.tools import provider_key, tool_pack  # noqa: E402
 
 
 class Mock:
@@ -439,7 +439,7 @@ class RunDurableRetryLaterTests(Base):
 
         class Fake(Argentic):
             def wake(self, agent, message, **kw):
-                from argentic_labs.core import WakeResponse
+                from argentic_ai.core import WakeResponse
                 calls.append(kw["idempotency_key"])
                 if kw["idempotency_key"].endswith(".0"):
                     return WakeResponse("done", "", 0.0, 1, "wk_0", [{"id": "a", "tool": "boom", "args": {}, "seq": 1}])

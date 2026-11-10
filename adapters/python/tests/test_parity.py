@@ -14,8 +14,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
 sys.path.insert(0, PKG)
 
-import argentic_labs  # noqa: E402
-from argentic_labs import core  # noqa: E402
+import argentic_ai  # noqa: E402
+from argentic_ai import core  # noqa: E402
 
 TS_DIR = os.path.join(PKG, "..", "typescript")
 TS = os.path.join(TS_DIR, "argentic.ts")
@@ -33,7 +33,7 @@ def py_version():
 
 class VersionTest(unittest.TestCase):
     def test_dunder_version_is_the_pyproject_version(self):
-        self.assertEqual(argentic_labs.__version__, py_version())
+        self.assertEqual(argentic_ai.__version__, py_version())
 
 
 @unittest.skipUnless(os.path.exists(TS), "TypeScript client not alongside")

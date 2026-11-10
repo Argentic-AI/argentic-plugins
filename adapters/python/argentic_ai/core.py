@@ -174,7 +174,7 @@ class Argentic:
             headers={
                 **({} if body is None else {"Content-Type": "application/json"}),
                 "Authorization": f"Bearer {self.api_key}",
-                "User-Agent": f"argentic-labs-python/{__version__}",
+                "User-Agent": f"argentic-ai-python/{__version__}",
                 **headers,
             },
         )

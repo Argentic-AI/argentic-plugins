@@ -1,4 +1,4 @@
-// The agent's tools, written as Vercel AI SDK tool() objects. @argentic-labs/client/ai-sdk turns them into
+// The agent's tools, written as Vercel AI SDK tool() objects. @argentic-ai/client/ai-sdk turns them into
 // Argentic tools: Argentic runs the loop and asks this code to carry out each action.
 import { tool } from 'ai'
 import { z } from 'zod'

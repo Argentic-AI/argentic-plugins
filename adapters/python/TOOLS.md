@@ -1,11 +1,11 @@
 # Retry-safe tools (Python)
 
-`argentic_labs.tools.tool_pack` is the same tool pack as the TypeScript client's, with the same behavior and the same edges. Read [the TypeScript notes](../typescript/TOOLS.md) for what Stripe, Resend, Slack, GitHub, SMTP and HTTP can and cannot promise. Nothing here is exactly-once.
+`argentic_ai.tools.tool_pack` is the same tool pack as the TypeScript client's, with the same behavior and the same edges. Read [the TypeScript notes](../typescript/TOOLS.md) for what Stripe, Resend, Slack, GitHub, SMTP and HTTP can and cannot promise. Nothing here is exactly-once.
 
 ```python
 import os
-from argentic_labs import Argentic, run_durable, model_from_env
-from argentic_labs.tools import tool_pack
+from argentic_ai import Argentic, run_durable, model_from_env
+from argentic_ai.tools import tool_pack
 
 tools = tool_pack(
     stripe={"secret_key": os.environ["STRIPE_SECRET_KEY"], "max_amount": 50_000},

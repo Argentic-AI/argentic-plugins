@@ -1,10 +1,10 @@
 # Retry-safe tools
 
-`@argentic-labs/client/tools` gives `runDurable` tools for real services. Every action Argentic hands you carries a stable key (`agent:seq`), so a cut-off one can be retried safely. These tools use that key the way each provider allows.
+`@argentic-ai/client/tools` gives `runDurable` tools for real services. Every action Argentic hands you carries a stable key (`agent:seq`), so a cut-off one can be retried safely. These tools use that key the way each provider allows.
 
 ```ts
-import { Argentic, runDurable } from '@argentic-labs/client'
-import { toolPack } from '@argentic-labs/client/tools'
+import { Argentic, runDurable } from '@argentic-ai/client'
+import { toolPack } from '@argentic-ai/client/tools'
 
 const tools = toolPack({
   stripe: { secretKey: process.env.STRIPE_SECRET_KEY!, maxAmount: 50_000 },

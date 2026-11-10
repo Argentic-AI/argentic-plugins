@@ -2,7 +2,7 @@ import { dashboardUrl } from '@/lib/config'
 import { visitor } from '@/lib/http'
 import { loadSession } from '@/lib/session'
 import { store } from '@/lib/store'
-import { Argentic, hintFor } from '@argentic-labs/client'
+import { Argentic, hintFor } from '@argentic-ai/client'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60

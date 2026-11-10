@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `npx @argentic-labs/client demo`: kill an agent mid-run, run it again, and watch it skip what already finished.
+// `npx @argentic-ai/client demo`: kill an agent mid-run, run it again, and watch it skip what already finished.
 // Uses only the published client. State lives in ./.argentic-demo/ so a rerun from the same folder picks up the same run.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -22,7 +22,7 @@ const task =
   'Order 1182 (ticket T-77, customer dana@example.com) arrived broken. Refund the $42 order, ' +
   'email the customer that the refund is on its way, then close the ticket. Do one step at a time.'
 
-const usage = `Usage: npx @argentic-labs/client demo [--fresh] [--kill-after N]
+const usage = `Usage: npx @argentic-ai/client demo [--fresh] [--kill-after N]
 
   --fresh         start a new run (forget the one in ./.argentic-demo/)
   --kill-after N  kill the process yourself after N actions, instead of pressing Ctrl-C

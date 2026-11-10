@@ -15,8 +15,8 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "adapters", "python"))
 
 from pydantic_ai import RunContext  # noqa: E402
 
-from argentic_labs import Argentic, hint_for, model_from_env, run_durable, summarize_replay  # noqa: E402
-from argentic_labs.pydantic_ai import from_pydantic_ai_tools  # noqa: E402
+from argentic_ai import Argentic, hint_for, model_from_env, run_durable, summarize_replay  # noqa: E402
+from argentic_ai.pydantic_ai import from_pydantic_ai_tools  # noqa: E402
 
 TASK = ("Order 1182 (ticket T-77, customer dana@example.com) arrived broken. Refund the $42 order, "
         "email the customer that the refund is on its way, then close the ticket. Do one step at a time.")
