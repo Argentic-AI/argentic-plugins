@@ -10,7 +10,7 @@ There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic 
 
 To run your own agent, start with the [TypeScript client](adapters/typescript/README.md#use) or the [quickstart](https://getargentic.com/docs/quickstart/). You need an Argentic API key from https://getargentic.com/platform and a model key.
 
-To test Argentic against a plain loop on a scripted scenario, use [`@argentic-ai/check`](check/README.md). It runs a shop shift and a coordinator day on your own keys, scores both arms with code, and stops at a spend cap you set. Its `controls` command needs no keys, but it does not run Argentic or any model: it only checks the scorers on scripted agents. A real run needs both keys.
+To test Argentic against a plain loop on a scripted scenario, use [`@argentic-ai/check`](check/README.md). It runs a shop shift and a coordinator day on your own keys, scores both arms with code, and stops at a spend cap you set. It needs an Argentic key and a model key.
 
 `npx @argentic-ai/client demo` was removed in client 0.2.0. The kill-and-resume refund story still lives in [`examples/`](examples/).
 

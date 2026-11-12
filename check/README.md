@@ -7,14 +7,6 @@ Run our shop shift and our coordinator day yourself. Same scripted scenario for 
 
 Each command runs two arms on the same script: a plain windowed loop we wrote (the transcript, with the oldest turns dropped when it grows) and Argentic through the public client. You get one table. It is a spot check on your own keys, not a benchmark: one scenario, one seed, one model. Run a few seeds before you read anything into a difference.
 
-## Try it without a key
-
-```
-npx @argentic-ai/check controls
-```
-
-Runs the scorers on scripted agents (a perfect one, a forgetful one, one that pays refunds twice, an idle one). No model, no keys, no network. It shows the scorers can reach 100% and that an agent without memory does not.
-
 ## Run it
 
 You need an Anthropic key and an Argentic key (https://getargentic.com/platform). Node 22 or newer. Set the keys in your shell, not in a file.
