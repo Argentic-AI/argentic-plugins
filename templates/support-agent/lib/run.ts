@@ -1,5 +1,5 @@
-// The durable loop: wake the agent, carry out the actions it asks for, hand the results back.
-// It is the same shape as runDurable in @argentic-ai/client, with two differences a web app needs:
+// The run loop: wake the agent, carry out the actions it asks for, hand the results back.
+// It is the same shape as `run` in @argentic-ai/client (`runDurable` before 0.2.0), with two differences a web app needs:
 // the ledger lives in the state store (not a local file), and a Kill can stop it between any two awaits.
 import { Argentic, freeModel, toArgenticSchema, type ModelSpec, type ToolDecl } from '@argentic-ai/client'
 import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'

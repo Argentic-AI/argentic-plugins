@@ -23,7 +23,7 @@ check("day scorer: an idle agent starts nothing", di.R2_lost_or_doubled.pass ===
 // command line
 const run = async (argv, env = {}) => { const out = [], err = []; const code = await main(argv, env, { out: (s) => out.push(s), err: (s) => err.push(s) }); return { code, out: out.join("\n"), err: err.join("\n") }; };
 const keys = { MODEL_KEY: "sk-test", ARGENTIC_API_KEY: "aek_test" };
-let r = await run(["help"]); check("help exits 0", r.code === 0 && /argentic-check controls/.test(r.out));
+let r = await run(["help"]); check("help exits 0", r.code === 0 && /argentic-check shop/.test(r.out));
 r = await run(["shop"], keys); check("refuses to start without --cap-usd", r.code === 2 && /--cap-usd is required/.test(r.err));
 r = await run(["shop", "--cap-usd", "0"], keys); check("refuses a zero cap", r.code === 2);
 r = await run(["shop", "--cap-usd", "1"], {}); check("refuses without a model key", r.code === 2 && /MODEL_KEY/.test(r.err));

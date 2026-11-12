@@ -6,27 +6,13 @@ This repo holds only manifests, skills, MCP settings and small client adapters. 
 
 There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account (OAuth) and pick an organization. No API key is needed for the MCP. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
 
-## Run the demo (2 minutes)
+## Try it
 
-You need an Argentic API key from https://getargentic.com/platform and a model key. The default model is a free NVIDIA one; get its key at https://build.nvidia.com. Node 22 or newer.
+To run your own agent, start with the [TypeScript client](adapters/typescript/README.md#use) or the [quickstart](https://getargentic.com/docs/quickstart/). You need an Argentic API key from https://getargentic.com/platform and a model key.
 
-```
-export ARGENTIC_API_KEY=aek_...
-export MODEL_KEY=nvapi-...
-npx @argentic-ai/client demo
-```
+To test Argentic against a plain loop on a scripted scenario, use [`@argentic-ai/check`](check/README.md). It runs a shop shift and a coordinator day on your own keys, scores both arms with code, and stops at a spend cap you set. It needs an Argentic key and a model key.
 
-fish:
-
-```
-set -x ARGENTIC_API_KEY aek_...
-set -x MODEL_KEY nvapi-...
-npx @argentic-ai/client demo
-```
-
-A small support agent refunds an order, emails the customer and closes the ticket, one action every couple of seconds, on a prompt the engine rebuilds at each step. To see what a restart does, press Ctrl-C while it works, then run the same command again from the same folder. The rerun skips the actions that already finished and does the rest. An action you cut off halfway runs again, which is safe because every action carries a stable key. At the end the demo counts what landed in its outbox (one line per action), checks every wake against the journal, and tells you where the run is in the dashboard. Open the run you killed and press Check under Proof of what ran.
-
-`--fresh` starts a new run. `--kill-after 1` kills it for you if you'd rather not race the keyboard. The source is [`adapters/typescript/cli.ts`](adapters/typescript/cli.ts).
+`npx @argentic-ai/client demo` was removed in client 0.2.0. The kill-and-resume refund story still lives in [`examples/`](examples/).
 
 ## Claude Code
 
@@ -87,7 +73,7 @@ The HTTP API still works on its own: `POST /v1/agents/{agent}/wake` and the othe
 
 ## Bring your own framework
 
-Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Hand the loop to Argentic and keep the tools. [`adapters/`](adapters/) has one small adapter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. Both clients also ship the same demo to try it with nothing to write: `npx @argentic-ai/client demo` or `python -m argentic_ai demo`.
+Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Hand the loop to Argentic and keep the tools. [`adapters/`](adapters/) has one small adapter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. To try Argentic with nothing to write, see [Try it](#try-it); the Python package still has `python -m argentic_ai demo`.
 
 ## Ask your agent to do it
 

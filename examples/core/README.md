@@ -69,9 +69,9 @@ fish: `env ARGENTIC_CRASH_AFTER=1 python3 refund.py`. `python3 -m unittest -v` r
 ## Your own tools
 
 ```ts
-import { Argentic, runDurable, type DurableTool } from '../../adapters/typescript/argentic.ts'
+import { Argentic, run, type Tool } from '../../adapters/typescript/argentic.ts'
 
-const tools: DurableTool[] = [{
+const tools: Tool[] = [{
   name: 'close_ticket',
   description: 'Close a support ticket with a note.',
   parameters: { type: 'object', properties: { ticket_id: { type: 'string' }, note: { type: 'string' } }, required: ['ticket_id', 'note'] },
@@ -79,7 +79,7 @@ const tools: DurableTool[] = [{
 }]
 ```
 
-Pass them to `runDurable` with an `agent` and a `runId` you keep the same across restarts. See [`refund.ts`](refund.ts) for the whole thing.
+Pass them to `run` with an `agent` and a `runId` you keep the same across restarts. See [`refund.ts`](refund.ts) for the whole thing.
 
 ## Tests
 

@@ -485,7 +485,7 @@ def tool_pack(
     sleep: Callable[[float], None] = time.sleep,
     timeout: float = 30.0,
 ) -> list[Tool]:
-    """Tools for run_durable. Pass only the services you use; each is built from your options and secrets,
+    """Tools for run. Pass only the services you use; each is built from your options and secrets,
     never from anything the model sends. With Resend and SMTP both set, Resend is ``send_email`` and SMTP
     is ``send_email_smtp``.
 

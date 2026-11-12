@@ -15,7 +15,7 @@ from .core import Tool
 
 
 def from_openai_agents_tools(tools: Iterable[Any]) -> list[Tool]:
-    """Turn @function_tool / FunctionTool objects into run_durable tools (Argentic accepts up to 8)."""
+    """Turn @function_tool / FunctionTool objects into run tools (Argentic accepts up to 8)."""
     out: list[Tool] = []
     for t in tools:
         if not isinstance(t, FunctionTool):

@@ -1,4 +1,4 @@
-"""Argentic client and run_durable. Standard library only, Python 3.10+.
+"""Argentic client and run. Standard library only, Python 3.10+.
 
 Framework adapters live in `argentic_ai.langchain`, `argentic_ai.openai_agents` and `argentic_ai.pydantic_ai`.
 `python -m argentic_ai demo` (or the `argentic-ai` command) kills an agent mid-run and resumes it.
@@ -23,6 +23,7 @@ from .core import (
     handle_due,
     hint_for,
     model_from_env,
+    run,
     run_durable,
     sign_notice,
     summarize_replay,
@@ -33,5 +34,5 @@ from .core import (
 __all__ = [
     "Action", "Argentic", "ArgenticError", "DEFAULT_BASE_URL", "DueNotice", "FREE_MODEL", "Ledger", "ModelSpec", "RetryLater", "RunResult",
     "Tool", "ToolContext", "WakeResponse", "WebhookVerificationError", "__version__", "handle_due", "hint_for", "model_from_env",
-    "run_durable", "sign_notice", "summarize_replay", "to_argentic_schema", "verify_due",
+    "run", "run_durable", "sign_notice", "summarize_replay", "to_argentic_schema", "verify_due",
 ]

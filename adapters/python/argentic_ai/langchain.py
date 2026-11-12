@@ -14,7 +14,7 @@ from .core import Tool
 
 
 def from_langchain_tools(tools: Iterable[Any]) -> list[Tool]:
-    """Turn BaseTool / @tool objects into run_durable tools (Argentic accepts up to 8)."""
+    """Turn BaseTool / @tool objects into run tools (Argentic accepts up to 8)."""
     out: list[Tool] = []
     for t in tools:
         fn = convert_to_openai_tool(t)["function"]

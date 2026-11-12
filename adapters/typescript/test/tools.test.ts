@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { RetryLater, type DurableTool } from '../argentic.ts'
+import { RetryLater, type Tool } from '../argentic.ts'
 import { toolPack, providerKey, type ToolPackOptions } from '../tools.ts'
 import { githubMock, httpMock, resendMock, slackMock, smtpMock, stripeMock, type Mock, type SmtpMock } from './mocks.ts'
 
@@ -16,8 +16,8 @@ const fresh = () => join(dir, `intents-${++n}.json`)
 const noSleep = async () => {}
 /** A "process": tools built from a state file. A new call to pack() with the same file is a restart. */
 const pack = (o: ToolPackOptions, statePath: string, tries = 1) => toolPack({ ...o, statePath, tries, sleep: noSleep })
-const tool = (tools: DurableTool[], name: string) => tools.find((t) => t.name === name)!
-const run = (tools: DurableTool[], name: string, args: object, key: string) =>
+const tool = (tools: Tool[], name: string) => tools.find((t) => t.name === name)!
+const run = (tools: Tool[], name: string, args: object, key: string) =>
   tool(tools, name).execute(args, { seq: 1, idempotencyKey: key }) as Promise<any>
 
 // ---- Stripe ----------------------------------------------------------------------------

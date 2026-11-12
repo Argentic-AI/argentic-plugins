@@ -8,7 +8,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import * as net from 'node:net'
 import * as tls from 'node:tls'
-import { RetryLater, type DurableTool, type ToolContext } from './argentic.ts'
+import { RetryLater, type Tool, type ToolContext } from './argentic.ts'
 
 // ---------------------------------------------------------------------------
 // Options
@@ -239,7 +239,7 @@ const ambiguousNote = (what: string) =>
 // ---------------------------------------------------------------------------
 // Stripe: native idempotency (Idempotency-Key header).
 
-function stripeTools(rt: Runtime, o: StripeOptions): DurableTool[] {
+function stripeTools(rt: Runtime, o: StripeOptions): Tool[] {
   const base = (o.baseUrl ?? 'https://api.stripe.com').replace(/\/+$/, '')
   const call = async (ctx: ToolContext, path: string, params: Record<string, string>) => {
     const res = await rt.withRetry(
@@ -322,7 +322,7 @@ function stripeTools(rt: Runtime, o: StripeOptions): DurableTool[] {
 // ---------------------------------------------------------------------------
 // Resend: native idempotency (Idempotency-Key header).
 
-function resendTools(rt: Runtime, o: ResendOptions, name: string): DurableTool[] {
+function resendTools(rt: Runtime, o: ResendOptions, name: string): Tool[] {
   const base = (o.baseUrl ?? 'https://api.resend.com').replace(/\/+$/, '')
   return [
     {
@@ -452,7 +452,7 @@ async function smtpSend(o: SmtpOptions, msg: { to: string; subject: string; body
   }
 }
 
-function smtpTools(rt: Runtime, o: SmtpOptions, name: string): DurableTool[] {
+function smtpTools(rt: Runtime, o: SmtpOptions, name: string): Tool[] {
   const policy = o.onAmbiguous ?? 'hold'
   const domain = (o.from.match(/@([^>\s]+)/)?.[1] ?? 'argentic.local').replace(/[^A-Za-z0-9.-]/g, '')
   return [
@@ -489,7 +489,7 @@ function smtpTools(rt: Runtime, o: SmtpOptions, name: string): DurableTool[] {
 // ---------------------------------------------------------------------------
 // Slack: no idempotency. The key rides in message metadata; before any repeat the tool looks for it.
 
-function slackTools(rt: Runtime, o: SlackOptions): DurableTool[] {
+function slackTools(rt: Runtime, o: SlackOptions): Tool[] {
   const base = (o.baseUrl ?? 'https://slack.com/api').replace(/\/+$/, '')
   const policy = o.onAmbiguous ?? 'hold'
   const call = (method: string, payload: Record<string, unknown>) =>
@@ -542,7 +542,7 @@ function slackTools(rt: Runtime, o: SlackOptions): DurableTool[] {
 
 const marker = (key: string) => `<!-- argentic-key:${key.replace(/--/g, '-')} -->`
 
-function githubTools(rt: Runtime, o: GithubOptions): DurableTool[] {
+function githubTools(rt: Runtime, o: GithubOptions): Tool[] {
   const base = (o.baseUrl ?? 'https://api.github.com').replace(/\/+$/, '')
   const policy = o.onAmbiguous ?? 'hold'
   const h = { Authorization: `Bearer ${o.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' }
@@ -613,7 +613,7 @@ function githubTools(rt: Runtime, o: GithubOptions): DurableTool[] {
 // ---------------------------------------------------------------------------
 // Generic HTTP POST with an Idempotency-Key header.
 
-function httpTools(rt: Runtime, o: HttpOptions): DurableTool[] {
+function httpTools(rt: Runtime, o: HttpOptions): Tool[] {
   const hosts = new Set(o.allowHosts.map((h) => h.toLowerCase()))
   return [
     {
@@ -648,13 +648,13 @@ function httpTools(rt: Runtime, o: HttpOptions): DurableTool[] {
 // ---------------------------------------------------------------------------
 
 /**
- * Tools for runDurable. Pass only the services you use; each tool is built from your options and your
+ * Tools for run. Pass only the services you use; each tool is built from your options and your
  * secrets, never from anything the model sends. With Resend and SMTP both set, Resend is `send_email`
  * and SMTP is `send_email_smtp`.
  */
-export function toolPack(opts: ToolPackOptions): DurableTool[] {
+export function toolPack(opts: ToolPackOptions): Tool[] {
   const rt = new Runtime(opts)
-  const out: DurableTool[] = []
+  const out: Tool[] = []
   if (opts.stripe) out.push(...stripeTools(rt, opts.stripe))
   if (opts.resend) out.push(...resendTools(rt, opts.resend, 'send_email'))
   if (opts.smtp) out.push(...smtpTools(rt, opts.smtp, opts.resend ? 'send_email_smtp' : 'send_email'))

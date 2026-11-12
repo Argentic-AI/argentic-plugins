@@ -1,11 +1,12 @@
-"""Argentic client and run_durable. Standard library only, Python 3.10+.
+"""Argentic client and run. Standard library only, Python 3.10+.
 
 Argentic runs the agent loop. Your code declares tools and carries out the
-actions Argentic hands back. run_durable keeps a small local ledger so a run
+actions Argentic hands back. run keeps a small local ledger so a run
 that is started again resumes without repeating a finished action.
 """
 from __future__ import annotations
 
+import warnings
 import asyncio
 import base64
 import binascii
@@ -58,7 +59,7 @@ FREE_MODEL: ModelSpec = {"provider": "nvidia", "id": "nvidia/nemotron-3.5-lightn
 
 class RetryLater(Exception):
     """Raise from a tool when the outcome is not known yet and the same call is safe to try again
-    (a network drop, a provider that is down). run_durable does not write it to the ledger: the run
+    (a network drop, a provider that is down). run does not write it to the ledger: the run
     stops, and running it again asks for the same action again with the same key."""
 
 
@@ -508,7 +509,7 @@ def handle_due(
     return notice, wake
 
 
-# ---- durable runs ---------------------------------------------------------
+# ---- the run loop ---------------------------------------------------------
 
 @dataclass
 class Tool:
@@ -672,7 +673,7 @@ def to_argentic_schema(schema: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def run_durable(
+def run(
     client: Argentic,
     *,
     agent: str,
@@ -781,3 +782,9 @@ def run_durable(
             break
 
     return RunResult(reply=reply, wakes=wakes, steps=steps, status=status, spent_usd=spent)
+
+
+def run_durable(*args: Any, **kwargs: Any) -> RunResult:
+    """Deprecated: renamed to `run` in 0.2.0. Same function; this name stays so existing code keeps working."""
+    warnings.warn("run_durable is renamed to run", DeprecationWarning, stacklevel=2)
+    return run(*args, **kwargs)

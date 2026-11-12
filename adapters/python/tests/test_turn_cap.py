@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from argentic_ai.core import Argentic, Tool, run_durable  # noqa: E402
+from argentic_ai.core import Argentic, Tool, run  # noqa: E402
 
 MODEL = {"provider": "nvidia", "id": "x", "prices": {"in": 0, "out": 0}}
 
@@ -107,7 +107,7 @@ class TurnCapTest(unittest.TestCase):
 
         tools = [Tool("read_source", "Read a source", {"type": "object", "properties": {"id": {"type": "string"}}}, read),
                  Tool("save_note", "Save a note", {"type": "object", "properties": {"text": {"type": "string"}}}, note)]
-        return run_durable(self.client, agent="turncap-test", run_id="r", task="Read source a and sum it up.", tools=tools,
+        return run(self.client, agent="turncap-test", run_id="r", task="Read source a and sum it up.", tools=tools,
                            ledger_path=os.path.join(self.dir, "ledger.json"), model=MODEL, log=lambda s: None,
                            crash_after_actions=1 if crash else None, crash=crash_now)
 

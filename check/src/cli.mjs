@@ -9,7 +9,6 @@ import { verifyLab } from "./lab.mjs";
 
 const HELP = `argentic-check: test our shop shift and coordinator day yourself.
 
-  argentic-check controls                 free: the scorers on scripted agents. No keys, no network.
   argentic-check shop  --cap-usd 0.5      the Kestrel Supply shift (default ${SHOP_EVENTS} events), plain loop vs Argentic
   argentic-check day   --cap-usd 0.3      the coordinator day (default 18 asks), plain loop vs Argentic
   argentic-check verify                   check that the scenario and scorer files are byte-identical to the lab's

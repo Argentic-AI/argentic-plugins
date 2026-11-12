@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { jsonSchema, tool } from 'ai'
-import { Argentic, runDurable, checkOncePer, type DurableTool, type ModelSpec } from '../argentic.ts'
+import { Argentic, run, checkOncePer, type Tool, type ModelSpec } from '../argentic.ts'
 import { fromAiSdkTools } from '../ai-sdk.ts'
 import { fromMastraTools } from '../mastra.ts'
 import { httpMock, type Mock } from './mocks.ts'
@@ -15,7 +15,7 @@ const REFUND_PARAMS = {
   properties: { order_id: { type: 'string' }, amount_usd: { type: 'number' }, note: { type: 'string' }, ids: { type: 'array', items: { type: 'string' } } },
   required: ['order_id', 'amount_usd'],
 }
-const refund = (extra: Partial<DurableTool> = {}): DurableTool => ({
+const refund = (extra: Partial<Tool> = {}): Tool => ({
   name: 'refund_order',
   description: 'Refund an order.',
   parameters: REFUND_PARAMS,
@@ -29,7 +29,7 @@ after(() => rmSync(dir, { recursive: true, force: true }))
 
 let n = 0
 /** Run one wake against a server that answers `done`, and return the exact body the client sent. */
-async function sentBody(tools: DurableTool[]): Promise<string> {
+async function sentBody(tools: Tool[]): Promise<string> {
   const m: Mock = await httpMock({ honorsKey: false })
   m.server.removeAllListeners('request')
   m.server.on('request', async (r, res) => {
@@ -41,7 +41,7 @@ async function sentBody(tools: DurableTool[]): Promise<string> {
   })
   try {
     const client = new Argentic({ apiKey: 'aek_test', modelKey: 'mk_customer', baseUrl: m.url })
-    await runDurable({ client, agent: 'a', runId: 'r', task: 'go', tools, model: MODEL, ledgerPath: join(dir, `ledger-${++n}.json`), log: () => {} })
+    await run({ client, agent: 'a', runId: 'r', task: 'go', tools, model: MODEL, ledgerPath: join(dir, `ledger-${++n}.json`), log: () => {} })
     assert.equal(m.requests.length, 1)
     return m.requests[0]!.body
   } finally {

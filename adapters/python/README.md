@@ -2,7 +2,7 @@
 
 Argentic client for Python. Argentic runs your agent's loop: it calls the model, keeps the journal, and hands each tool call back to your code as an action with a stable key. Each turn it rebuilds the prompt from the journal (state blocks plus a recent tail of about 40K tokens) instead of replaying an ever-growing transcript, and the journal keeps the full record. Kill your process mid-run and start it again: it resumes without repeating a finished action.
 
-The package is the client and `run_durable`, with no dependencies (Python 3.10+), plus three adapters that take the tools you already wrote:
+The package is the client and `run`, with no dependencies (Python 3.10+), plus three adapters that take the tools you already wrote:
 
 - `argentic_ai.langchain`: LangChain and LangGraph tools. Needs `langchain-core`.
 - `argentic_ai.openai_agents`: OpenAI Agents SDK `@function_tool` tools and an `Agent`'s instructions. Needs `openai-agents`. Nothing here runs `Runner`.
@@ -42,13 +42,13 @@ python -m argentic_ai demo
 Plain tools are a name, a JSON schema and a handler:
 
 ```python
-from argentic_ai import Argentic, Tool, model_from_env, run_durable
+from argentic_ai import Argentic, Tool, model_from_env, run
 
 def close_ticket(args, ctx):
     # ctx.idempotency_key is "<agent>:<seq>": pass it on to the system you call
     return close(args["ticket_id"], args["note"], idempotency_key=ctx.idempotency_key)
 
-result = run_durable(
+result = run(
     Argentic(),  # reads ARGENTIC_API_KEY and MODEL_KEY
     agent="support-bot", run_id="ticket-77",  # keep both the same across restarts
     task="Close ticket T-77 with the note 'refund sent'.",
@@ -61,7 +61,7 @@ result = run_durable(
 print(result.reply)
 ```
 
-Handlers can be `async def`; `run_durable` itself is synchronous. With LangChain tools:
+Handlers can be `async def`; `run` itself is synchronous. With LangChain tools:
 
 ```python
 from langchain_core.tools import tool
@@ -72,7 +72,7 @@ def close_ticket(ticket_id: str, note: str) -> str:
     """Close a support ticket."""
     return f"closed {ticket_id}"
 
-result = run_durable(Argentic(), agent="support-bot", run_id="ticket-77", task="Close ticket T-77.",
+result = run(Argentic(), agent="support-bot", run_id="ticket-77", task="Close ticket T-77.",
                      tools=from_langchain_tools([close_ticket]), ledger_path=".argentic-ticket-77.json")
 ```
 
@@ -80,9 +80,9 @@ Run it again after a crash and it resumes. `model` defaults to `FREE_MODEL`; `mo
 
 `client.replay(agent, wake_id)` re-renders a wake's prompts from the journal and compares them to what the model was shown. It calls no model and spends nothing. The answer always has `turns`, `matched`, `mismatched` and `unverifiable`, and `summarize_replay(result)` gives one line.
 
-Hooks on `run_durable`: `on_wake_start(step)` just before each wake is sent, `on_wake(step, wake_id, status, replayed)` after each answer, and `on_action(seq, tool, result, fresh)` for every action (`fresh` is False for one the ledger says already finished).
+Hooks on `run`: `on_wake_start(step)` just before each wake is sent, `on_wake(step, wake_id, status, replayed)` after each answer, and `on_action(seq, tool, result, fresh)` for every action (`fresh` is False for one the ledger says already finished).
 
-Each follow-up wake also sends the tool results as the `results` field, `[{"seq": n, "result": ...}]`, next to the message text the model reads, so the API journals the real result of every call (0.1.8). The first wake has none, and a result the ledger already held is sent again like the others. Pass `structured_results=False` to `run_durable` for the text only. If the API does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, pass `results=[...]` with the `message`, never with `fire_due`, at most 100 entries.
+Each follow-up wake also sends the tool results as the `results` field, `[{"seq": n, "result": ...}]`, next to the message text the model reads, so the API journals the real result of every call (0.1.8). The first wake has none, and a result the ledger already held is sent again like the others. Pass `structured_results=False` to `run` for the text only. If the API does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, pass `results=[...]` with the `message`, never with `fire_due`, at most 100 entries.
 
 ## Waking on a schedule (handle_due)
 
@@ -128,7 +128,7 @@ def due(request: Request, body: bytes = Body()):  # the raw bytes, not parsed JS
 | `ARGENTIC_BASE_URL` | The API address. Unset, it is `https://api.getargentic.com`. |
 | `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | A model other than the free default, read by `model_from_env()`. Prices are dollars per million tokens. With no `ARGENTIC_MODEL_ID` you get `FREE_MODEL`. |
 
-`Argentic(api_key=..., model_key=..., base_url=..., timeout=300)` takes the same things as arguments. A 409 (the agent is mid-run) waits and sends the same request again, and a 5xx or a network failure retries with the same key after 1, 2, 4 and 8 seconds, so a retry never adds a message twice. `backoff=` and `max_queued_waits=` change both. If the ledger file is not valid JSON, `run_durable` warns on stderr, sets it aside as `<path>.corrupt` and starts empty, so finished actions may run again. Errors are `ArgenticError` with `.status` (None when no answer came back) and `.body`; `hint_for(error)` returns a next step for the ones a first run tends to hit.
+`Argentic(api_key=..., model_key=..., base_url=..., timeout=300)` takes the same things as arguments. A 409 (the agent is mid-run) waits and sends the same request again, and a 5xx or a network failure retries with the same key after 1, 2, 4 and 8 seconds, so a retry never adds a message twice. `backoff=` and `max_queued_waits=` change both. If the ledger file is not valid JSON, `run` warns on stderr, sets it aside as `<path>.corrupt` and starts empty, so finished actions may run again. Errors are `ArgenticError` with `.status` (None when no answer came back) and `.body`; `hint_for(error)` returns a next step for the ones a first run tends to hit.
 
 ## Honest limits
 
@@ -136,6 +136,6 @@ Delivery is at-least-once. If the process dies while an action is running, befor
 
 LangChain tools are called the way a LangGraph `ToolNode` calls them, with that key as the tool call id. A tool that takes `tool_call_id: Annotated[str, InjectedToolCallId]` receives `"<agent>:<seq>"` and can pass it on as the idempotency key of the system it calls.
 
-OpenAI Agents SDK tools are called through their own `on_invoke_tool`, with that key as the SDK `ctx.tool_call_id`. Each tool call runs on its own event loop, so call `run_durable` from sync code.
+OpenAI Agents SDK tools are called through their own `on_invoke_tool`, with that key as the SDK `ctx.tool_call_id`. Each tool call runs on its own event loop, so call `run` from sync code.
 
 Docs: https://getargentic.com/docs/client/. Source and issues: https://github.com/Argentic-AI/argentic-plugins.

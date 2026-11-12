@@ -11,7 +11,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_ai import Argentic, ArgenticError, Tool, run_durable  # noqa: E402
+from argentic_ai import Argentic, ArgenticError, Tool, run  # noqa: E402
 from fake_server import refund_handler, serve  # noqa: E402
 
 SCHEMA = {"type": "object", "properties": {}}
@@ -53,7 +53,7 @@ class StructuredResultsTest(unittest.TestCase):
         return [make(n) for n in ("refund_order", "send_email", "close_ticket")]
 
     def run_it(self, ledger="ledger.json", **kw):
-        return run_durable(self.client, agent=kw.pop("agent", "a1"), run_id=kw.pop("run_id", "r"), task="go", tools=self.tools(),
+        return run(self.client, agent=kw.pop("agent", "a1"), run_id=kw.pop("run_id", "r"), task="go", tools=self.tools(),
                            ledger_path=os.path.join(self.tmp.name, ledger), log=lambda s: None, **kw)
 
     def test_a_follow_up_wake_carries_results_and_still_the_text_message(self):
