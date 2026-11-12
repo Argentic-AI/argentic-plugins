@@ -1,6 +1,6 @@
 {
   "name": "@argentic-ai/check",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run our shop shift and coordinator day yourself, with your own keys and a hard spend cap: a plain loop against Argentic on the same scripted scenario, scored by code.",
   "license": "MIT",
   "type": "module",
