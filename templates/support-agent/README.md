@@ -55,7 +55,7 @@ app/page.tsx, components/Console.tsx   the single page
 app/api/run                            streams the run (one JSON line per change)
 app/api/kill, reset, session, proof    Kill flag, start over, current state, replay check
 lib/tools.ts                           the two tools, the sandbox mail provider, the prompt
-lib/run.ts                             the durable loop
+lib/run.ts                             the run loop
 lib/store.ts, lib/session.ts           state
 test/run.test.ts                       kill after the mail left, resume, one email (offline)
 ```

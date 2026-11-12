@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { Argentic, runDurable, type DurableTool, type ModelSpec } from '../argentic.ts'
+import { Argentic, run as runAgent, type Tool, type ModelSpec } from '../argentic.ts'
 import { httpMock, type Mock } from './mocks.ts'
 
 const MODEL: ModelSpec = { provider: 'p', id: 'm', prices: { in: 0, out: 0 } }
 const PARAMS = { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] }
-const tools = (ran: string[] = []): DurableTool[] =>
+const tools = (ran: string[] = []): Tool[] =>
   ['read_a', 'read_b'].map((name) => ({
     name,
     description: name,
@@ -60,8 +60,8 @@ async function server(refuseResults: boolean): Promise<{ m: Mock; seen: Seen[] }
   return { m, seen }
 }
 
-const run = (m: Mock, extra: Partial<Parameters<typeof runDurable>[0]> = {}, client = new Argentic({ apiKey: 'aek_test', baseUrl: m.url })) =>
-  runDurable({ client, agent: 'a', runId: 'r', task: 'go', tools: tools(), model: MODEL, ledgerPath: ledgerPath(), log: () => {}, ...extra })
+const run = (m: Mock, extra: Partial<Parameters<typeof runAgent>[0]> = {}, client = new Argentic({ apiKey: 'aek_test', baseUrl: m.url })) =>
+  runAgent({ client, agent: 'a', runId: 'r', task: 'go', tools: tools(), model: MODEL, ledgerPath: ledgerPath(), log: () => {}, ...extra })
 
 test('a follow-up wake carries results with the right seq and result, and still the text message', async () => {
   const { m, seen } = await server(false)

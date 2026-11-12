@@ -1,9 +1,9 @@
 # Retry-safe tools
 
-`@argentic-ai/client/tools` gives `runDurable` tools for real services. Every action Argentic hands you carries a stable key (`agent:seq`), so a cut-off one can be retried safely. These tools use that key the way each provider allows.
+`@argentic-ai/client/tools` gives `run` tools for real services. Every action Argentic hands you carries a stable key (`agent:seq`), so a cut-off one can be retried safely. These tools use that key the way each provider allows.
 
 ```ts
-import { Argentic, runDurable } from '@argentic-ai/client'
+import { Argentic, run } from '@argentic-ai/client'
 import { toolPack } from '@argentic-ai/client/tools'
 
 const tools = toolPack({
@@ -14,7 +14,7 @@ const tools = toolPack({
   http: { allowHosts: ['hooks.example.com'] },
   statePath: '.argentic-intents.json',
 })
-await runDurable({ client, agent: 'support', runId: 'order-1182', ledgerPath: '.argentic-ledger.json', task, tools })
+await run({ client, agent: 'support', runId: 'order-1182', ledgerPath: '.argentic-ledger.json', task, tools })
 ```
 
 Pass only the services you use. Secrets, the From address and the allow lists come from your code, never from the model.
@@ -32,7 +32,7 @@ Pass only the services you use. Secrets, the From address and the allow lists co
 
 ## Declaring a tool: `once_per`
 
-A tool you pass to `runDurable` (or build with `fromAiSdkTools` / `fromMastraTools`) can carry a `once_per` template: a business-operation key whose `{name}` placeholders are filled in from the call's arguments. Argentic refuses a second call that produces the same key, whatever else it writes, in this reply or any later wake, and tells the agent why. This is on top of the retry key above: the retry key makes one call safe to repeat, `once_per` stops the agent making the same call twice with different wording.
+A tool you pass to `run` (or build with `fromAiSdkTools` / `fromMastraTools`) can carry a `once_per` template: a business-operation key whose `{name}` placeholders are filled in from the call's arguments. Argentic refuses a second call that produces the same key, whatever else it writes, in this reply or any later wake, and tells the agent why. This is on top of the retry key above: the retry key makes one call safe to repeat, `once_per` stops the agent making the same call twice with different wording.
 
 ```ts
 const tools = await fromAiSdkTools(
@@ -54,7 +54,7 @@ Left out, the request is exactly what 0.1.6 sent.
 
 1. Before it calls out, a tool writes an intent (`started`) to `statePath`. After the answer it writes `done` with the result. A `done` intent returns its result and calls nothing.
 2. If the network drops, a 429 or a 5xx comes back, the tool tries the same call again with the same key, up to `tries` times (default 4, with `backoffMs` waits). If that runs out it throws `RetryLater`.
-3. `runDurable` does not write a `RetryLater` to the ledger. The run stops, and running it again asks for the same action with the same key. A tool that returned an ordinary error (a declined card, a refused recipient) is a finished action: the model sees the error and it is recorded.
+3. `run` does not write a `RetryLater` to the ledger. The run stops, and running it again asks for the same action with the same key. A tool that returned an ordinary error (a declined card, a refused recipient) is a finished action: the model sees the error and it is recorded.
 
 ## What each provider can promise
 

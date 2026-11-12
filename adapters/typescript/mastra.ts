@@ -1,6 +1,6 @@
 // Mastra on-ramp: your createTool() tools become Argentic tools.
 // Only the tools carry over. Argentic runs the loop, not Agent.generate or Agent.stream.
-import { withOncePer, type DurableTool } from './argentic.ts'
+import { withOncePer, type Tool } from './argentic.ts'
 
 type Standard = {
   validate: (v: unknown) => unknown
@@ -17,8 +17,8 @@ interface MastraToolLike {
  * The tool name is the key, as when you pass `tools` to an Agent.
  * `oncePer` maps a tool name to its `once_per` template, such as `{ refund_order: 'refund:{order_id}' }`.
  */
-export function fromMastraTools(tools: Record<string, MastraToolLike>, opts: { oncePer?: Record<string, string> } = {}): DurableTool[] {
-  return withOncePer(Object.entries(tools).map(([name, t]): DurableTool => {
+export function fromMastraTools(tools: Record<string, MastraToolLike>, opts: { oncePer?: Record<string, string> } = {}): Tool[] {
+  return withOncePer(Object.entries(tools).map(([name, t]): Tool => {
     const std = (t.inputSchema as { '~standard'?: Standard } | undefined)?.['~standard']
     const parameters = std?.jsonSchema?.input({ target: 'draft-07' }) ?? { type: 'object', properties: {} }
     return {

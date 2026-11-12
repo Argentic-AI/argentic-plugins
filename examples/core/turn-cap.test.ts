@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { Argentic, runDurable, type DurableTool } from '../../adapters/typescript/argentic.ts'
+import { Argentic, run as runAgent, type Tool } from '../../adapters/typescript/argentic.ts'
 
 // A stand-in for the API's turn limit. The first wake reaches max_turns right after the agent asks to
 // read a source, so it answers turn_cap and stays open. Asking that key again continues the same wake
@@ -65,13 +65,13 @@ class Crash extends Error {}
 function setup(name: string) {
   fake.reset()
   const ran: string[] = []
-  const tools: DurableTool[] = [
+  const tools: Tool[] = [
     { name: 'read_source', description: 'Read a source', parameters: { type: 'object', properties: { id: { type: 'string' } } }, execute: () => { ran.push('read_source'); return 'SRC-7' } },
     { name: 'save_note', description: 'Save a note', parameters: { type: 'object', properties: { text: { type: 'string' } } }, execute: () => { ran.push('save_note'); return 'ok' } },
   ]
   const client = new Argentic({ apiKey: 'test-key', baseUrl, sleep: async () => {} })
   const run = (crash = false) =>
-    runDurable({
+    runAgent({
       client, agent: 'turncap-test', runId: 'r', task: 'Read source a and sum it up.', tools,
       ledgerPath: join(dir, `${name}.json`), log: () => {},
       onAction: crash ? () => { throw new Crash('simulated crash') } : undefined,

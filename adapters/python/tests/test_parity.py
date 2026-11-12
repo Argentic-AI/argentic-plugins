@@ -73,7 +73,7 @@ class ParityTest(unittest.TestCase):
                                  ("onWakeStart", "on_wake_start"), ("onWake", "on_wake"), ("crashAfterActions", "crash_after_actions"),
                                  ("structuredResults", "structured_results")]:
             self.assertIn(ts_name, self.ts)
-            self.assertIn(py_name, inspect.signature(core.run_durable).parameters)
+            self.assertIn(py_name, inspect.signature(core.run).parameters)
 
     def test_the_same_structured_results_field_and_fallback(self):
         py = open(core.__file__).read()

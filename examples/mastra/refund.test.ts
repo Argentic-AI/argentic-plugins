@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
-import { Argentic, ArgenticError, runDurable } from '../../adapters/typescript/argentic.ts'
+import { Argentic, ArgenticError, run as runAgent } from '../../adapters/typescript/argentic.ts'
 import { fromMastraTools } from '../../adapters/typescript/mastra.ts'
 import { makeTools, outboxCounts, system, task } from './refund.ts'
 
@@ -84,7 +84,7 @@ test('a crash after the first action resumes without repeating it', async () => 
   const outbox = join(dir, 'outbox.jsonl')
   const client = new Argentic({ apiKey: 'test-key', baseUrl, backoffMs: [0, 0, 0, 0], sleep: async () => {} })
   const run = async (crash: boolean) =>
-    runDurable({
+    runAgent({
       client,
       agent: 'refund-demo-test',
       runId: 'run-test',

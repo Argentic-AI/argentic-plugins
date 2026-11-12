@@ -4,7 +4,7 @@ import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 
 import { pathToFileURL } from 'node:url'
 import { tool } from 'ai'
 import { z } from 'zod'
-import { Argentic, freeModel, hintFor, runDurable, type ModelSpec } from '../../adapters/typescript/argentic.ts'
+import { Argentic, freeModel, hintFor, run, type ModelSpec } from '../../adapters/typescript/argentic.ts'
 import { fromAiSdkTools } from '../../adapters/typescript/ai-sdk.ts'
 
 export const system =
@@ -90,7 +90,7 @@ async function main() {
 
   const client = new Argentic({ apiKey, modelKey })
   const crash = Number(process.env.ARGENTIC_CRASH_AFTER) || undefined
-  const out = await runDurable({
+  const out = await run({
     client,
     agent,
     runId,

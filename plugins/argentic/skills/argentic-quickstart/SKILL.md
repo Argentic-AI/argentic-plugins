@@ -72,7 +72,7 @@ Rules:
    `freeModel` and `model_from_env()` use a free NVIDIA model. For another model, set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` (dollars per million tokens), as the examples README describes. Prices matter: the spend limit counts with them.
 
    Neither client loads `.env` itself. Run the script with the user's usual way of loading it (`node --env-file=.env`, `python-dotenv`, or the shell).
-6. If the user already has tools, wire them with `runDurable` (TypeScript) or `run_durable` (Python) and the adapter from the table, as the example does. Keep `agent` and `run_id` the same across restarts.
+6. If the user already has tools, wire them with `run` (TypeScript or Python) and the adapter from the table, as the example does. Keep `agent` and `run_id` the same across restarts.
 7. Run it once. Use a throwaway agent id (`quickstart-check`) and `max_usd` of 0.05. The user must have set both keys first. Do not run it before that.
 8. Report `spent_usd`, `status` and the agent id you used. If it fails, `hint_for` / `hintFor` in the client turns the error into a plain sentence. `model_key_rejected` and `bad_model` mean nothing was spent.
 

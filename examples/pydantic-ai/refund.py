@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "adapters", "python"))
 
 from pydantic_ai import RunContext  # noqa: E402
 
-from argentic_ai import Argentic, hint_for, model_from_env, run_durable, summarize_replay  # noqa: E402
+from argentic_ai import Argentic, hint_for, model_from_env, run, summarize_replay  # noqa: E402
 from argentic_ai.pydantic_ai import from_pydantic_ai_tools  # noqa: E402
 
 TASK = ("Order 1182 (ticket T-77, customer dana@example.com) arrived broken. Refund the $42 order, "
@@ -88,7 +88,7 @@ def run(client, workdir, model, fresh=False, crash_after=None, crash=None, log=p
     log(f"agent {state['agent']}, run {state['run_id']}")
 
     extra = {"crash": crash} if crash else {}
-    result = run_durable(
+    result = run(
         client, agent=state["agent"], run_id=state["run_id"], task=TASK, system=SYSTEM,
         tools=from_pydantic_ai_tools(make_tools(outbox_path)),
         ledger_path=ledger_path, model=model, crash_after_actions=crash_after, log=log, **extra,

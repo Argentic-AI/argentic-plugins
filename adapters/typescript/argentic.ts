@@ -1,4 +1,4 @@
-// Argentic core: a small client and a durable tool loop. No dependencies, Node 22+.
+// Argentic core: a small client and a tool loop. No dependencies, Node 22+.
 // Argentic runs the agent loop; your code carries out the tool calls it asks for.
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
@@ -639,11 +639,11 @@ export class Ledger {
 }
 
 // ---------------------------------------------------------------------------
-// runDurable
+// run
 
 /**
  * Throw this from a tool when the outcome is not known yet and the same call is safe to try again:
- * a network drop, a timeout, a provider that is down. runDurable does not write it to the ledger,
+ * a network drop, a timeout, a provider that is down. run does not write it to the ledger,
  * so it stops the run. Run it again and the action is asked for again with the same key.
  */
 export class RetryLater extends Error {
@@ -659,9 +659,12 @@ export interface ToolContext {
   idempotencyKey: string
 }
 
-export interface DurableTool extends ToolDecl {
+export interface Tool extends ToolDecl {
   execute: (args: any, ctx: ToolContext) => unknown | Promise<unknown>
 }
+
+/** @deprecated Renamed to `Tool` in 0.2.0. Same type; this name stays so existing code keeps compiling. */
+export type DurableTool = Tool
 
 export interface ActionInfo {
   tool: string
@@ -677,7 +680,7 @@ export interface RunOptions {
   runId: string
   task: string
   system?: string
-  tools: DurableTool[]
+  tools: Tool[]
   ledgerPath: string
   model?: ModelSpec
   maxSteps?: number
@@ -716,7 +719,7 @@ const safeKey = (s: string) => s.replace(/[^A-Za-z0-9\-_.:]/g, '-').slice(0, 128
  */
 const carriesOn = (s: WakeStatus) => s === 'turn_cap' || s === 'time_cap'
 
-export async function runDurable(opts: RunOptions): Promise<RunResult> {
+export async function run(opts: RunOptions): Promise<RunResult> {
   const { client, agent, tools } = opts
   const log = opts.log ?? ((line: string) => console.log(line))
   const maxSteps = opts.maxSteps ?? 8
@@ -803,3 +806,6 @@ export async function runDurable(opts: RunOptions): Promise<RunResult> {
 
   return { reply, wakes, steps, status, spentUsd }
 }
+
+/** @deprecated Renamed to `run` in 0.2.0. Same function; this name stays so existing code keeps working. */
+export const runDurable = run

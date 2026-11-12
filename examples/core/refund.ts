@@ -2,7 +2,7 @@
 // Run once with ARGENTIC_CRASH_AFTER=1 to die after the refund, then run again.
 import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { Argentic, freeModel, hintFor, runDurable, type DurableTool, type ModelSpec } from '../../adapters/typescript/argentic.ts'
+import { Argentic, freeModel, hintFor, run, type Tool, type ModelSpec } from '../../adapters/typescript/argentic.ts'
 
 export const system =
   'Tool calls are requests: their outcomes arrive in the next message. ' +
@@ -13,7 +13,7 @@ export const task =
   'email the customer that the refund is on its way, then close the ticket. Do one step at a time.'
 
 /** Side effects land in a file so you can see nothing finished twice. */
-export function makeTools(outbox: string): DurableTool[] {
+export function makeTools(outbox: string): Tool[] {
   // Safe to repeat: the same idempotency key (agent:seq) is recorded once.
   const record = (key: string, name: string, data: object) => {
     const seen = existsSync(outbox) && readFileSync(outbox, 'utf8').split('\n').some((l) => l && JSON.parse(l).key === key)
@@ -91,7 +91,7 @@ async function main() {
 
   const client = new Argentic({ apiKey, modelKey })
   const crash = Number(process.env.ARGENTIC_CRASH_AFTER) || undefined
-  const out = await runDurable({
+  const out = await run({
     client,
     agent,
     runId,

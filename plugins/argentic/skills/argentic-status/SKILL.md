@@ -11,7 +11,7 @@ This skill only reads. It makes no model call and spends nothing. Do not call `a
 
 1. Find the agents.
    - If the `argentic_agents` tool is available, call it first. It lists each agent with its wake count, open or cut-off count and last wake.
-   - If it is not available, ask the user for agent ids, or read them from their code (the `agent` argument to `runDurable`, `run_durable` or `client.wake`). Do not guess ids.
+   - If it is not available, ask the user for agent ids, or read them from their code (the `agent` argument to `run` or `client.wake`). Do not guess ids.
 2. For each agent with open wakes, call `argentic_wakes` with `state: "open"`. `interrupted` means the process died. Other states are caps or an error.
 3. For one run the user cares about, call `argentic_wake_get` with the wake id. If the user wants the steps, point them at the run page in the dashboard; the MCP does not read journals.
 4. If the `get_run_links` tool is available, call it for the runs you list and give the user the dashboard run page and the proof link, if the run is shared. If it is not available, point them at https://getargentic.com/platform and its runs.
