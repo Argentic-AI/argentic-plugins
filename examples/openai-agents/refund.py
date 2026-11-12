@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "adapters", "python"))
 from agents import Agent, function_tool  # noqa: E402
 from agents.tool_context import ToolContext  # noqa: E402
 
-from argentic_ai import Argentic, hint_for, model_from_env, run_durable, summarize_replay  # noqa: E402
+from argentic_ai import Argentic, hint_for, model_from_env, run, summarize_replay  # noqa: E402
 from argentic_ai.openai_agents import from_openai_agents_tools, instructions  # noqa: E402
 
 TASK = ("Order 1182 (ticket T-77, customer dana@example.com) arrived broken. Refund the $42 order, "
@@ -93,7 +93,7 @@ def run(client, workdir, model, fresh=False, crash_after=None, crash=None, log=p
 
     agent = make_agent(outbox_path)
     extra = {"crash": crash} if crash else {}
-    result = run_durable(
+    result = run(
         client, agent=state["agent"], run_id=state["run_id"], task=TASK, system=instructions(agent),
         tools=from_openai_agents_tools(agent.tools),
         ledger_path=ledger_path, model=model, crash_after_actions=crash_after, log=log, **extra,

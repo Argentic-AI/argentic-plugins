@@ -1,4 +1,4 @@
-"""run_durable and the ledger: hooks, async tools, the shared ledger file, defaults.
+"""run and the ledger: hooks, async tools, the shared ledger file, defaults.
 
 Run from adapters/python: python -m unittest discover -s tests -v
 """
@@ -12,7 +12,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_ai import FREE_MODEL, Argentic, Ledger, Tool, model_from_env, run_durable  # noqa: E402
+from argentic_ai import FREE_MODEL, Argentic, Ledger, Tool, model_from_env, run  # noqa: E402
 from fake_server import REFUND_SCRIPT, refund_handler, serve  # noqa: E402
 
 SCHEMA = {"type": "object", "properties": {}}
@@ -59,7 +59,7 @@ class RunTest(unittest.TestCase):
 
     def run_it(self, **kw):
         kw.setdefault("ledger_path", self.ledger_path())
-        return run_durable(self.client, agent="a1", run_id="r", task="go", tools=kw.pop("tools", None) or self.tools(),
+        return run(self.client, agent="a1", run_id="r", task="go", tools=kw.pop("tools", None) or self.tools(),
                            log=lambda s: None, **kw)
 
     # ---- hooks and defaults ----
@@ -100,7 +100,7 @@ class RunTest(unittest.TestCase):
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         client = Argentic(api_key="k", base_url=server.url, sleep=lambda s: None, log=lambda s: None)
-        run_durable(client, agent="a2", run_id="r", task="go", ledger_path=self.ledger_path("x.json"), log=lambda s: None,
+        run(client, agent="a2", run_id="r", task="go", ledger_path=self.ledger_path("x.json"), log=lambda s: None,
                     tools=[Tool("refund_order", "", SCHEMA, boom)])
         results = json.loads(server.requests[-1][2]["message"].split("\n", 1)[1])
         self.assertEqual(results, [{"tool": "refund_order", "seq": 2, "result": {"error": "card declined"}}])
@@ -227,6 +227,21 @@ class ModelFromEnvTest(unittest.TestCase):
         m = model_from_env({})
         m["prices"]["in"] = 5
         self.assertEqual(FREE_MODEL["prices"]["in"], 0)
+
+
+class DeprecatedNameTest(unittest.TestCase):
+    def test_run_durable_is_still_there_and_warns(self):
+        import warnings
+
+        import argentic_ai
+        from argentic_ai import run_durable
+
+        self.assertIn("run_durable", argentic_ai.__all__)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            with self.assertRaises(TypeError):  # no arguments: it reaches `run`, which wants a client
+                run_durable()
+        self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
 
 if __name__ == "__main__":

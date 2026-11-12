@@ -17,7 +17,7 @@ from .core import Tool as ArgenticTool
 
 
 def from_pydantic_ai_tools(tools: Iterable[Tool | Callable[..., Any]]) -> list[ArgenticTool]:
-    """Turn Pydantic AI tools (`Tool` objects, or plain functions) into run_durable tools (Argentic accepts up to 8)."""
+    """Turn Pydantic AI tools (`Tool` objects, or plain functions) into run tools (Argentic accepts up to 8)."""
     toolset = FunctionToolset([t if isinstance(t, Tool) else Tool(t) for t in tools])
     defs = asyncio.run(_defs(toolset))
     return [

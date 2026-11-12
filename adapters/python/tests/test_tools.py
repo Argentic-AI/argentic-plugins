@@ -14,7 +14,7 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from argentic_ai import RetryLater, Tool, ToolContext, run_durable  # noqa: E402
+from argentic_ai import RetryLater, Tool, ToolContext, run  # noqa: E402
 from argentic_ai.core import Argentic  # noqa: E402
 from argentic_ai.tools import provider_key, tool_pack  # noqa: E402
 
@@ -433,7 +433,7 @@ class PackShapeTests(Base):
         self.assertEqual(names(stripe={"secret_key": "k"}, github={"token": "t"}), ["stripe_refund", "stripe_charge", "github_create_issue", "github_create_comment"])
 
 
-class RunDurableRetryLaterTests(Base):
+class RunRetryLaterTests(Base):
     def test_retry_later_is_not_written_to_the_ledger(self):
         calls = []
 
@@ -454,12 +454,12 @@ class RunDurableRetryLaterTests(Base):
             return {"ok": True}
 
         ledger = os.path.join(self.dir, "ledger.json")
-        run = lambda: run_durable(Fake("k", "mk", "http://x"), agent="a", run_id="r", task="t", tools=[Tool("boom", "", {"type": "object", "properties": {}}, boom)],
+        go = lambda: run(Fake("k", "mk", "http://x"), agent="a", run_id="r", task="t", tools=[Tool("boom", "", {"type": "object", "properties": {}}, boom)],
                                   ledger_path=ledger, model={}, log=lambda s: None)
         with self.assertRaises(RetryLater):
-            run()
+            go()
         self.assertFalse(os.path.exists(ledger))
-        out = run()
+        out = go()
         self.assertEqual(out.reply, "finished")
         self.assertEqual(attempts["n"], 2)
 

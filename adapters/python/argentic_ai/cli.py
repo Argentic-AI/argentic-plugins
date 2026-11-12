@@ -15,7 +15,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from .core import Argentic, ArgenticError, Ledger, Tool, ToolContext, hint_for, model_from_env, run_durable
+from .core import Argentic, ArgenticError, Ledger, Tool, ToolContext, hint_for, model_from_env, run
 
 SYSTEM = (
     "Tool calls are requests: their outcomes arrive in the next message. "
@@ -177,7 +177,7 @@ def demo(argv: list[str], client: Argentic | None = None, env: dict[str, str] | 
             hinted = True
             out(yellow("  Now is a good time to press Ctrl-C."))
 
-    res = run_durable(
+    res = run(
         client, agent=agent, run_id=run_id, task=TASK, system=SYSTEM,
         tools=make_tools(outbox, float(e.get("ARGENTIC_DEMO_WORK_MS", 1500)), out, {"dim": dim, "bold": bold, "green": green, "yellow": yellow}),
         ledger_path=ledger_path, model=model_from_env(e), max_steps=10,

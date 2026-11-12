@@ -4,7 +4,7 @@
 
 ```python
 import os
-from argentic_ai import Argentic, run_durable, model_from_env
+from argentic_ai import Argentic, run, model_from_env
 from argentic_ai.tools import tool_pack
 
 tools = tool_pack(
@@ -15,12 +15,12 @@ tools = tool_pack(
     http={"allow_hosts": ["hooks.example.com"]},
     state_path=".argentic-intents.json",
 )
-run_durable(Argentic(), agent="support", run_id="order-1182", task=task, tools=tools,
+run(Argentic(), agent="support", run_id="order-1182", task=task, tools=tools,
             ledger_path=".argentic-ledger.json", model=model_from_env())
 ```
 
 Options mirror the TypeScript ones in snake_case: `stripe {secret_key, max_amount}`, `resend {api_key, from}`, `smtp {host, port, secure, user, password, from, on_ambiguous}`, `slack {token, channels, on_ambiguous}`, `github {token, repos, on_ambiguous}`, `http {allow_hosts, headers, allow_http}`, and `tries`, `backoff`, `state_path`. `base_url` on each service points it at a test server.
 
-When the outcome of a call is unknown and the same call is safe to try again, a tool raises `RetryLater`. `run_durable` does not write it to the ledger; the run stops, and running it again asks for the same action with the same key.
+When the outcome of a call is unknown and the same call is safe to try again, a tool raises `RetryLater`. `run` does not write it to the ledger; the run stops, and running it again asks for the same action with the same key.
 
 Tests: `python -m unittest discover -s tests` (20 tests, mock providers that commit an effect and then drop the connection). The local-engine run in the TypeScript suite covers the engine side; the Python tests do not start one.

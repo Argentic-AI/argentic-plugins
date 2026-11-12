@@ -8,11 +8,9 @@ Each tool call the agent makes comes back to your code to carry out. If the proc
 
 ## Try it
 
-```
-npx @argentic-ai/client demo
-```
+Install it below and run the example under Use. To compare Argentic with a plain loop on a scripted scenario, run `npx @argentic-ai/check` (see the [repo README](../../README.md#try-it)).
 
-Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run it again, and it skips what already finished. Details in the [repo README](../../README.md#run-the-demo-2-minutes).
+Client 0.2.0 removed `npx @argentic-ai/client demo` and the `argentic` command with it, and renamed `runDurable` to `run` and `DurableTool` to `Tool`. The old names still work as deprecated aliases (Python: `run_durable` is now `run`, with the old name kept and a `DeprecationWarning`). Nothing else in the library changed.
 
 ## Install
 
@@ -20,7 +18,7 @@ Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run i
 npm i @argentic-ai/client
 ```
 
-- `@argentic-ai/client`: the client and `runDurable`, no dependencies, Node 22+.
+- `@argentic-ai/client`: the client and `run`, no dependencies, Node 22+.
 - `@argentic-ai/client/ai-sdk`: `fromAiSdkTools`, needs `ai` v5, v6 or v7.
 - `@argentic-ai/client/tools`: `toolPack`, retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and a generic HTTP POST. See [TOOLS.md](TOOLS.md).
 - `@argentic-ai/client/mastra`: `fromMastraTools`, takes the `createTool()` tools you would pass to an Agent (the key is the tool name). Needs `@mastra/core` 1.x for the tools; the adapter itself imports nothing.
@@ -32,7 +30,7 @@ To vendor it instead: clone this repo and copy `argentic.ts`, `ai-sdk.ts` and `m
 ```ts
 import { tool } from 'ai'
 import { z } from 'zod'
-import { Argentic, runDurable } from '@argentic-ai/client'
+import { Argentic, run } from '@argentic-ai/client'
 import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'
 
 const tools = { refund_order: tool({
@@ -43,7 +41,7 @@ const tools = { refund_order: tool({
 
 // apiKey defaults to ARGENTIC_API_KEY and modelKey to MODEL_KEY
 const client = new Argentic()
-const out = await runDurable({
+const out = await run({
   client, agent: 'my-agent', runId: 'order-1182', ledgerPath: '.argentic-ledger.json',
   task: 'Refund order 1182.', system: 'Call one tool per turn.',
   tools: await fromAiSdkTools(tools),
@@ -51,11 +49,11 @@ const out = await runDurable({
 console.log(out.reply)
 ```
 
-Keep `agent` and `runId` the same across restarts. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `runDurable` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
+Keep `agent` and `runId` the same across restarts. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `run` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
 
 ## Once per operation (`once_per`, 0.1.7)
 
-A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one. Set it on a `DurableTool` directly, or pass `{ oncePer: { refund_order: 'refund:{order_id}' } }` as the second argument to `fromAiSdkTools` or `fromMastraTools`. The template is checked before the request is sent. See [TOOLS.md](TOOLS.md#declaring-a-tool-once_per). 0.1.6 and earlier dropped the field.
+A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one. Set it on a `Tool` directly, or pass `{ oncePer: { refund_order: 'refund:{order_id}' } }` as the second argument to `fromAiSdkTools` or `fromMastraTools`. The template is checked before the request is sent. See [TOOLS.md](TOOLS.md#declaring-a-tool-once_per). 0.1.6 and earlier dropped the field.
 
 ## Tools, context and deferred loading (0.1.10)
 
@@ -68,7 +66,7 @@ const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: 
 
 ## Structured tool results (0.1.11)
 
-`runDurable` answers the tools an agent asked for with a text message the model reads, and now also sends the same results as the `results` field of the wake: `[{ seq, result }]`, where `seq` is the action's `seq` and `result` is exactly what the tool returned (or the `{ error }` object when it threw). The API journals each as the real result of that call. The first wake of a run has none, and a result the ledger already held is sent again like the others. Pass `structuredResults: false` to send the text only. If the API you talk to does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, add `results` to the body next to the `message`, never with `fire_due`, at most 100 entries.
+`run` answers the tools an agent asked for with a text message the model reads, and now also sends the same results as the `results` field of the wake: `[{ seq, result }]`, where `seq` is the action's `seq` and `result` is exactly what the tool returned (or the `{ error }` object when it threw). The API journals each as the real result of that call. The first wake of a run has none, and a result the ledger already held is sent again like the others. Pass `structuredResults: false` to send the text only. If the API you talk to does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, add `results` to the body next to the `message`, never with `fire_due`, at most 100 entries.
 
 ## Waking on a schedule (handleDue)
 
