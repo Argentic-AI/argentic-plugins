@@ -1,0 +1,61 @@
+{
+  "copied_on": "2026-11-12",
+  "note": "Byte-identical copies of the lab files. Do not edit; replace from the lab and update the hash.",
+  "files": [
+    {
+      "path": "shop/gen.mjs",
+      "source": "ops-sim-12h/harness-v3/gen.mjs",
+      "sha256": "2bf12c3c648cad442c0e39519734fbef9e3c900e6197e15d40e300fdf0a69c3a"
+    },
+    {
+      "path": "shop/world.mjs",
+      "source": "ops-sim-12h/harness-v3/world.mjs",
+      "sha256": "6218fd3d6cbafe2c1e7d61b6edc3a714d5166bf9ed954ebb6710116e0b6876c9"
+    },
+    {
+      "path": "shop/prompt-ops.mjs",
+      "source": "ops-sim-12h/harness-v3/prompt-ops.mjs",
+      "sha256": "a3cd3696f932017e0b4dc84b4e6aaded9379ef24a3399c33a29be7ebdefdb7c7"
+    },
+    {
+      "path": "shop/attempts.mjs",
+      "source": "ops-sim-12h/harness-v3/attempts.mjs",
+      "sha256": "118203c397132bedb9907fdb5ef6ff1ec9884318017b0d37c3adf2d7ca991efd"
+    },
+    {
+      "path": "day/gen.mjs",
+      "source": "public-benchmark/coordinator-day/gen.mjs",
+      "sha256": "bd68d1a21ce5c90163915c9d12b8ebad79361f66f8c37e0a1e6de3a151aa4410"
+    },
+    {
+      "path": "day/world.mjs",
+      "source": "public-benchmark/coordinator-day/world.mjs",
+      "sha256": "d9b04644b03481511d711f312f90112aa28c09df3a04f1c56449c7c049ad5306"
+    },
+    {
+      "path": "day/grade.mjs",
+      "source": "public-benchmark/coordinator-day/grade.mjs",
+      "sha256": "bbf74f2faa8da5a456864f7dcf7194803168934f26c81a11c5744ad0a6ae87ec"
+    },
+    {
+      "path": "day/prompt.mjs",
+      "source": "public-benchmark/coordinator-day/prompt.mjs",
+      "sha256": "c287f41b8504ee0ac203bb8a778a3f3e02ce4497cf9679c5aed64e3d03b9db28"
+    },
+    {
+      "path": "day/controls.mjs",
+      "source": "public-benchmark/coordinator-day/controls.mjs",
+      "sha256": "c1f9679efa66ba2d44dc37e7d9edc34aa7bd297ed21d93ab86655b1c7f01141d"
+    },
+    {
+      "path": "day/drive-core.mjs",
+      "source": "public-benchmark/coordinator-day/drive-core.mjs",
+      "sha256": "08a71b60d6782b3443aeec9fa7a4ee3280f6e4e870dddf37f191f65ee960f16d"
+    },
+    {
+      "path": "day/plain-loop.mjs",
+      "source": "public-benchmark/coordinator-day/plain-loop.mjs",
+      "sha256": "9b2ca21681242b705ab5a6a512f06321e6e29b7deea5cee8df11178bbc3cbf9e"
+    }
+  ]
+}
