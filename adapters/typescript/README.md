@@ -8,11 +8,9 @@ Each tool call the agent makes comes back to your code to carry out. If the proc
 
 ## Try it
 
-```
-npx @argentic-ai/client demo
-```
+Install it below and run the example under Use. To compare Argentic with a plain loop on a scripted scenario, run `npx @argentic-ai/check` (see the [repo README](../../README.md#try-it)).
 
-Set `ARGENTIC_API_KEY` and `MODEL_KEY` first. Press Ctrl-C while it works, run it again, and it skips what already finished. Details in the [repo README](../../README.md#run-the-demo-2-minutes).
+Client 0.2.0 removed `npx @argentic-ai/client demo` and the `argentic` command with it. The library API is unchanged.
 
 ## Install
 

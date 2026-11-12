@@ -15,7 +15,7 @@ All six tell the same story: refund an order, email the customer, close the tick
 
 Want something to copy into your own project? [templates/node-agent](../templates/node-agent/) is one file on the published client, and [templates/support-agent](../templates/support-agent/) is a deployable Next.js support agent on the AI SDK with a Kill button, a sandbox inbox and a proof check.
 
-Just want to see it? `npx @argentic-ai/client demo` runs the same story with nothing to clone (see the [repo README](../README.md#run-the-demo-2-minutes)), and so does `python -m argentic_ai demo` once the Python package is installed. No framework? Start with [core](core/). The core files in [`../adapters`](../adapters/) work on their own: `runDurable` (TypeScript) and `run_durable` (Python) take plain tools with a JSON schema and a handler.
+Just want to run Argentic against a scripted scenario with nothing to write? See `npx @argentic-ai/check` in the [repo README](../README.md#try-it). The Python package still has `python -m argentic_ai demo` once installed. No framework? Start with [core](core/). The core files in [`../adapters`](../adapters/) work on their own: `runDurable` (TypeScript) and `run_durable` (Python) take plain tools with a JSON schema and a handler.
 
 You need an Argentic API key from https://getargentic.com/platform and a model key. The default model is a free NVIDIA NIM model (get a key at https://build.nvidia.com); set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` to use another.
 
