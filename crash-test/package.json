@@ -1,6 +1,6 @@
 {
   "name": "@argentic-ai/crash-test",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Kill any agent at each tool call, restart it, and see which side effects happened twice. Works on any framework.",
   "license": "MIT",
   "type": "module",
