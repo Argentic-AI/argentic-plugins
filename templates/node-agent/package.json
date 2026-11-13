@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@argentic-ai/client": "^0.1.13",
+    "@argentic-ai/client": "^0.2.0",
     "ai": "^6.0.0",
     "zod": "^4.0.0"
   },

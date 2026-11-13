@@ -11,7 +11,7 @@
     "test": "node --import tsx --test test/run.test.ts"
   },
   "dependencies": {
-    "@argentic-ai/client": "^0.1.13",
+    "@argentic-ai/client": "^0.2.0",
     "ai": "^6.0.0",
     "geist": "^1.5.0",
     "lucide-react": "^0.540.0",

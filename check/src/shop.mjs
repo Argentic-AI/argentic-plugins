@@ -42,7 +42,7 @@ export function scoreShop(dir, { events: N, seed }) {
 // ---- arm: Argentic through the public client
 export async function runShopArgentic({ out, name = "shop-argentic", events: N = SHOP_EVENTS, seed = SHOP_SEED, capUsd, model, apiKey, modelKey, baseUrl, log = console.log, maxSteps = 20 * N + 200, parkAfter = 40 }) {
   if (!(capUsd > 0)) throw new Error("capUsd is required");
-  const { Argentic, runDurable } = await import("@argentic-ai/client");
+  const { Argentic, run: runLoop } = await import("@argentic-ai/client");
   const dir = mk(join(out, name)), P = (f) => join(dir, f), event = jsonl(P("events.jsonl"));
   const runFile = P("run.json"), resumed = existsSync(runFile);
   const run = resumed ? JSON.parse(readFileSync(runFile, "utf8")) : { arm: "argentic", agent: `check-${name}-${Date.now().toString(36)}`, created: new Date().toISOString(), events: N, seed, baseUrl, model: { provider: model.provider, id: model.id }, segments: [{ runId: `check-${name}`, task, steps: null }] };
@@ -78,7 +78,7 @@ export async function runShopArgentic({ out, name = "shop-argentic", events: N =
     for (;;) {
       const si = run.segments.length - 1, seg = run.segments[si], offset = run.segments.slice(0, si).reduce((a, g) => a + (g.steps ?? 0), 0);
       if (offset >= maxSteps) { stopReason = `step limit ${maxSteps}`; break; }
-      result = await runDurable({
+      result = await runLoop({
         client, agent: run.agent, runId: seg.runId, task: seg.task, system, tools, ledgerPath: P("ledger.json"), model, maxSteps: maxSteps - offset, limits: { max_turns: 1 }, log: () => {},
         onWakeStart: ({ step }) => {
           curStep = offset + step;
