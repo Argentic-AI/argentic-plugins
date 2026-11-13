@@ -1,6 +1,6 @@
 // Adapted from the lab's coordinator-day/argentic.mjs: only the import paths and the client package name changed (@argentic-labs -> @argentic-ai). Nothing here is scored; the scorer is lab/day/grade.mjs.
 // Entry A: the Argentic hosted engine, driven only through the public @argentic-ai/client (the calls any customer makes). Nothing here reaches into engine internals.
-// The engine decides what goes into each prompt. This process carries out the tool calls the engine hands back (runDurable) and sends their results with the next wake.
+// The engine decides what goes into each prompt. This process carries out the tool calls the engine hands back (the client's run) and sends their results with the next wake.
 // Spend comes from the engine's own per-wake spent_usd. No resume: the world lives in this process, so a crashed run is void and restarts under a new name.
 import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -16,7 +16,7 @@ export async function runArgentic({ name, root, asks = 18, seed = 20261106, capU
   modelKey = process.env.MODEL_KEY, provider = process.env.MODEL_PROVIDER ?? "anthropic", modelId = process.env.MODEL_ID ?? "claude-haiku-5-5", prices = HAIKU_PRICES, providerWaitMs = 15000, maxProviderRetries = 30, maxSegments = 50, quiet = false }) {
   if (!apiKey) throw new Error("ARGENTIC_API_KEY is not set");
   if (!modelKey) throw new Error("MODEL_KEY is not set");
-  const { Argentic, runDurable } = await import("@argentic-ai/client");
+  const { Argentic, run: runLoop } = await import("@argentic-ai/client");
   const model = { provider, id: modelId, prices: typeof prices === "string" ? JSON.parse(prices) : prices };
   const wakeSpend = new Map(), spent = () => { let s = 0; for (const v of wakeSpend.values()) s += v; return s; };
   const run = setupRun({ root, name, asks, seed, entry: "argentic-hosted", capUsd, maxMs, maxCalls, spent, quiet, config: { client: "@argentic-ai/client", client_version: clientVersion(), base_url: baseUrl, model, max_turns: maxTurns, resume: "none (run is void if the process dies)" } });
@@ -40,7 +40,7 @@ export async function runArgentic({ name, root, asks = 18, seed = 20261106, capU
   const agent = `coordday-${name}`, system = system_p1(); let stopReason = null, result = null, segments = 0, segTask = task_p1, nudges = 0; const HARD = new Set(["spend_cap", "budget_cap", "approval_required", "error"]);
   try {
     for (;;) {
-      result = await runDurable({ client, agent, runId: `${name}-s${segments}`, task: segTask, system, tools, ledgerPath: run.P("action-ledger.json"), model, maxSteps, limits: { max_turns: maxTurns }, log: (l) => run.logLine(l), onWakeStart: () => { run.beforeCall(); run.noteModelCall(); } });
+      result = await runLoop({ client, agent, runId: `${name}-s${segments}`, task: segTask, system, tools, ledgerPath: run.P("action-ledger.json"), model, maxSteps, limits: { max_turns: maxTurns }, log: (l) => run.logLine(l), onWakeStart: () => { run.beforeCall(); run.noteModelCall(); } });
       if (run.state.finished !== null) { stopReason = "finish"; break; }
       if (HARD.has(result.status)) { stopReason = `engine stopped: ${result.status}`; break; }
       if (++segments >= maxSegments) { stopReason = "too many segments without finish"; break; }

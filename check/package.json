@@ -1,6 +1,6 @@
 {
   "name": "@argentic-ai/check",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Run our shop shift and coordinator day yourself, with your own keys and a hard spend cap: a plain loop against Argentic on the same scripted scenario, scored by code.",
   "license": "MIT",
   "type": "module",
@@ -12,7 +12,7 @@
     "controls": "node bin/check.mjs controls"
   },
   "dependencies": {
-    "@argentic-ai/client": "^0.1.14"
+    "@argentic-ai/client": "^0.2.0"
   },
   "repository": { "type": "git", "url": "git+https://github.com/Argentic-AI/argentic-plugins.git", "directory": "check" },
   "homepage": "https://getargentic.com/research/check/",
