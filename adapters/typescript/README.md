@@ -2,7 +2,7 @@
 
 Argentic runs the agent loop. Your Vercel AI SDK or Mastra tools and system prompt carry over; the framework's own loop (`generateText`, `Agent`, Mastra `Agent.generate`) is not used.
 
-Each turn, Argentic rebuilds the prompt from a journal of the run instead of replaying an ever-growing transcript: state blocks plus a recent tail of about 40K tokens. The journal keeps the full record, so you can see every step the agent took and check it against what the model saw.
+Argentic is an engine that keeps AI agents right for hours while prompt size is bounded: the prompt does not grow with the history. The full record of the run is kept, so you can check every step.
 
 Each tool call the agent makes comes back to your code to carry out. If the process dies mid-run, run it again: it resumes without repeating a finished action.
 
