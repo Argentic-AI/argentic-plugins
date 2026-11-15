@@ -7,8 +7,7 @@ export function table(head, rows) {
 }
 export const state = (s) => (s.complete ? "finished" : `INCOMPLETE (${s.stopReason ?? s.stop_reason ?? "stopped early"})`);
 
-// Free scorer checks: each suite supplies its own scripted agents; the legend is shared.
+// Free scorer checks: each suite supplies its own scripted agents and explains them under its own block.
 export function controlsReport(blocks) {
-  return ["Free scorer checks: no model, no keys, no network.", "", ...blocks.flatMap((b, i) => (i ? ["", ...b] : b)),
-    "", "perfect reads the world's own bookkeeping, so it shows the scorer can reach 100%. forgetful loses what it was told earlier. repeats pays every refund twice (shop) or starts a worker per message (day). idle answers nothing."].join("\n");
+  return ["Free scorer checks: no model, no keys, no network.", "", ...blocks.flatMap((b, i) => (i ? ["", ...b] : b))].join("\n");
 }

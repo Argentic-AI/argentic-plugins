@@ -6,6 +6,7 @@ One harness for running a scripted agent scenario yourself. Same script for both
 |---|---|
 | `shop` (shop shift) | An agent runs a small online shop through hundreds of events: orders, price changes, refund requests, supplier deliveries, questions from the CEO. Code scores what it remembers from earlier (preferences, promised refunds, price changes, the refund window), whether the stock counts are exact, and whether it paid a refund twice. |
 | `day` (coordinator day) | An agent runs a crew of workers for one person across a simulated day. Code scores whether follow-ups reached the right worker, whether any ask was lost or started twice, whether the person's standing rules held, what it remembered, and whether its status reports were honest. This one is early: we have run it on only a few seeds, and our own runs showed gaps we are still working on. |
+| `longshift` | An agent is the one desk worker at a small bakery for a shift of hours, with about a hundred events an hour from the owner, customers, workers and systems. Code scores eight kinds of question (a fact given earlier, the current value of something that changed, standing instructions, contradictions, commitments, delegation and status, running counts, conflicting updates), each placed at a known hour and a known distance from what it needs. You get accuracy by hour and prompt size by hour, not one score. Argentic built longshift and also enters it. |
 
 Each run uses two arms on the same script: a plain windowed loop we wrote (the transcript, with the oldest turns dropped when it grows) and Argentic through the public client. You get one table. It is a spot check on your own keys, not a benchmark: one scenario, one seed, one model. Run a few seeds before you read anything into a difference.
 
@@ -41,7 +42,9 @@ Free, no keys: `npx @argentic-ai/check list` shows the suites, and `npx @argenti
 |---|---|
 | `--cap-usd N` | Required. The most the run will spend in total. Each arm gets an equal share and stops when it reaches it; the table then marks that arm INCOMPLETE and scores against the whole scenario, so a stopped run cannot look better by being shorter. |
 | `--size N` | How long the scenario is. Every suite takes it, and each has its own name for it: `--events N` for shop (default 300; our published runs used 900) and `--asks N` for day (default 18; our multi-seed runs used 54). |
+| `--hours N` | Longshift's name for `--size`: whole hours of shift, 3 to 48 (default 6; question kind F8 needs 5 or more). |
 | `--window-tokens N` | Shop only. The plain loop's window. Default 40000. |
+| `--plain-variant compact\|keep` | Longshift only. The plain loop with the provider's own context compaction (default), or one that keeps the whole transcript. Keep-everything costs far more over a long shift. |
 | `--seed N` | Scenario seed. Defaults to ours; change it to run a different shift. |
 | `--arms plain,argentic` | Default every arm the suite has. One arm halves the cost. |
 | `--model ID` | Default `claude-haiku-5-5`. Another model needs `--prices in,out,cache_hit,cache_write` (USD per million tokens), so the cap means something. |
@@ -83,6 +86,9 @@ From our own runs on Haiku 5.5. These are guesses for your run; the cap is the g
 | shop, 900 events | about $0.50 | about $0.7 | about 3 hours for Argentic |
 | day, 18 asks (default) | about $0.06 | about $0.05 | about 8 minutes in total |
 | day, 54 asks | about $0.19 | about $0.15 | 10 to 25 minutes for Argentic |
+| longshift, 6 hours (default) | about $0.15 | about $1.7 with compaction (about $4.7 keeping everything) | about 2 hours for Argentic |
+
+The longshift figures come from the kit's own free cost estimator, which is assumptions, not measurements. We have not yet run longshift live on your setup's path, so treat its estimate as the roughest of the three.
 
 The plain loop has no run of ours at shop size, so its figure is the least certain. The Argentic arm makes about 1.2 wakes per shop event (a 300-event shift is about 350 wakes) and about 7 per day ask; check your plan's call limit first.
 
@@ -91,6 +97,8 @@ The plain loop has no run of ours at shop size, so its figure is the least certa
 Shop: **earlier facts** are the questions about preferences, promised refunds, price changes and the refund window, answered right out of the total asked. **Stock exact** is the CEO's stock-count questions answered with the exact number. **Old prices** are quote questions answered with a price that had since changed. **Refunded twice** counts refund calls made for an order that was already refunded. These are the same rows as the November shop-shift page at https://getargentic.com/research/long-run-november/.
 
 Day: **routing**, **asks started once**, **rules kept**, **earlier facts**, **status F1** and **duplicate workers**, from the lab's scorer. No composite score.
+
+Longshift: one column per question kind (recall, current value, rules, contradictions, commitments, delegation, counts, conflicting updates), then accuracy and mean prompt tokens by hour of the shift. No composite score.
 
 ## Same files as the lab's
 
@@ -108,4 +116,4 @@ The scenario generators, worlds, prompts and scorers in `lab/` are byte-identica
 
 Your Anthropic key goes to Anthropic for the plain loop. For the Argentic arm it goes in the `X-Model-Key` header to Argentic, which does not store it. Your Argentic key goes only to Argentic. Run files in `--out` hold the scenario's events and what each arm did; they never hold either key.
 
-MIT licensed.
+MIT licensed, except `lab/longshift/`, which is Apache-2.0 for code and CC BY 4.0 for scenario text and data (see the licence files in that folder).

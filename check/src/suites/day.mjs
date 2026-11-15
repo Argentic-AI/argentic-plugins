@@ -37,6 +37,7 @@ export default {
       const g = dayControl(m, size);
       lines.push(`  ${m.padEnd(10)} routing ${g.R1_routing.pass}/${g.R1_routing.n}, lost or doubled ${g.R2_lost_or_doubled.pass}/${g.R2_lost_or_doubled.n}, rules ${g.R3_rules.pass}/${g.R3_rules.n}, earlier facts ${g.R4_recall.pass}/${g.R4_recall.n}, status F1 ${g.R6_status.mean_f1}`);
     }
+    lines.push("  perfect reads the world's own bookkeeping, so it shows the scorer can reach 100%. forgetful loses what it was told earlier. repeats starts a worker per message. idle answers nothing.");
     return lines;
   },
 };

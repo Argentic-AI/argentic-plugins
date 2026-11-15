@@ -7,6 +7,7 @@
 //   arms { name: { label, argentic?, estimate(size) -> {usd, minutes}, run(ctx) -> summary } }
 //                             argentic: true marks an arm that needs ARGENTIC_API_KEY. run() must stop itself at ctx.capUsd
 //                             and return a summary with `complete` (false if it stopped early) and `spent_usd`.
+//   validate?(size, flags)    optional: throw UsageError for a length or flag value the suite cannot run
 //   describe(size, seed)      the header line
 //   report(results, meta)     the table, as a string
 //   controls?(size)           free scripted-agent checks, as lines
@@ -15,8 +16,9 @@ import { resolve } from "node:path";
 import { UsageError } from "../common.mjs";
 import shop from "./shop.mjs";
 import day from "./day.mjs";
+import longshift from "./longshift.mjs";
 
-export const SUITES = [shop, day];
+export const SUITES = [shop, day, longshift];
 
 export function assertSuite(s, where = "suite") {
   const bad = (why) => { throw new UsageError(`${where} is not a valid suite: ${why}`); };

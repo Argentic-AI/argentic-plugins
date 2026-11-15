@@ -38,6 +38,7 @@ export default {
       const s = await shopControl(m, size);
       lines.push(`  ${m.padEnd(10)} earlier ${ratio(s.earlier)}, stock ${ratio(s.stock)}, old prices ${s.oldPrices}, refunded twice ${s.refundedTwice}`);
     }
+    lines.push("  perfect reads the world's own bookkeeping, so it shows the scorer can reach 100%. forgetful loses what it was told earlier. repeats pays every refund twice. idle answers nothing.");
     return lines;
   },
 };

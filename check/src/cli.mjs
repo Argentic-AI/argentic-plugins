@@ -48,7 +48,7 @@ export async function main(argv, env = process.env, io = { out: (s) => console.l
   try {
     if (cmd === "verify") { const v = verifyLab(); io.out(v.lines.join("\n")); return v.ok ? 0 : 1; }
     if (cmd === "list") {
-      io.out(SUITES.map((s) => `  ${s.id.padEnd(6)} ${s.title}: ${s.blurb}\n         length --${s.size.flag} N (default ${s.size.default}), seed ${s.seed}, arms ${Object.keys(s.arms).join(", ")}`).join("\n"));
+      io.out(SUITES.map((s) => `  ${s.id.padEnd(10)} ${s.title}: ${s.blurb}\n         length --${s.size.flag} N (default ${s.size.default}), seed ${s.seed}, arms ${Object.keys(s.arms).join(", ")}`).join("\n"));
       return 0;
     }
     if (cmd === "controls") {
@@ -78,6 +78,7 @@ export async function main(argv, env = process.env, io = { out: (s) => console.l
     if (needsArgentic.length && !apiKey) throw new UsageError("ARGENTIC_API_KEY is not set (get one at https://getargentic.com/platform), or run --arms plain.");
     if (flags[suite.size.flag] !== undefined && flags.size !== undefined) throw new UsageError(`give --${suite.size.flag} or --size, not both`);
     const size = Math.round(num(flags, flags[suite.size.flag] !== undefined ? suite.size.flag : "size", suite.size.default));
+    suite.validate?.(size, flags);
     const seed = flags.seed !== undefined ? Math.round(num(flags, "seed")) : suite.seed;
     const est = arms.map((a) => { const e = suite.arms[a].estimate(size); return { arm: suite.arms[a].label, usd: e.usd, minutes: Math.max(1, Math.round(e.minutes ?? 0)) }; });
 
@@ -94,7 +95,7 @@ export async function main(argv, env = process.env, io = { out: (s) => console.l
     const meta = { suite: suite.id, size, [suite.size.unit]: size, seed, model: model.id, date: new Date().toISOString().slice(0, 10), engine };
     for (const arm of arms) {
       io.out(`\n== ${suite.arms[arm].label} (cap ${usd(perArm)}) ==`);
-      results.push(await suite.arms[arm].run({ root, size, seed, capUsd: perArm, model, modelKey, apiKey, baseUrl, upstream, log: io.out, num: (k, d) => num(flags, k, d) }));
+      results.push(await suite.arms[arm].run({ root, size, seed, capUsd: perArm, model, modelKey, apiKey, baseUrl, upstream, log: io.out, flags, num: (k, d) => num(flags, k, d) }));
     }
     writeFileSync(join(root, "result.json"), JSON.stringify({ meta, results }, null, 2));
     io.out("\n" + suite.report(results, meta));

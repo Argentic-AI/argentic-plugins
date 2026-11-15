@@ -37,6 +37,10 @@ r = await run(["shop", "--cap-usd", "1", "--bogus"], keys); check("refuses unkno
 r = await run(["shop", "--cap-usd", "0.5", "--events", "300"], keys);
 check("prints an estimate and the cap, then waits for --yes", r.code === 2 && /Estimated spend/.test(r.out) && /Hard cap: \$0\.50 in total/.test(r.out) && /pass --yes/.test(r.err), r.out + r.err);
 r = await run(["day", "--cap-usd", "0.6"], keys); check("day shows its estimate too", /Coordinator day: 18 asks/.test(r.out) && /Estimated spend/.test(r.out) && r.code === 2);
+r = await run(["controls", "longshift"]); check("longshift controls: perfect solver 100%, idle 0%", r.code === 0 && /perfect\s+all 100%/.test(r.out) && /idle\s+all 0%/.test(r.out), r.out);
+r = await run(["longshift", "--cap-usd", "1", "--hours", "2"], keys); check("longshift refuses a shift under 3 hours", r.code === 2 && /whole number from 3 to 48/.test(r.err), r.err);
+r = await run(["longshift", "--cap-usd", "1", "--plain-variant", "weird"], keys); check("longshift refuses an unknown plain variant", r.code === 2 && /compact or keep/.test(r.err));
+r = await run(["longshift", "--cap-usd", "1"], keys); check("longshift prints an estimate and waits for --yes", r.code === 2 && /Longshift: 6-hour shift/.test(r.out) && /Estimated spend/.test(r.out));
 r = await run(["controls"]); check("controls runs with no keys", r.code === 0 && /perfect/.test(r.out) && /Coordinator day/.test(r.out));
 r = await run(["verify"]); check("verify exits 0 on the shipped files", r.code === 0);
 
