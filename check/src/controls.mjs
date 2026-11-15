@@ -33,9 +33,3 @@ const DAY_NAMES = { perfect: "solver", forgetful: "amnesiac", repeats: "perMsg",
 export function dayControl(mode, asks = 18, seed = 20261106) {
   const { grade } = runControl(DAY_NAMES[mode], genDay(asks, seed)); const { items_detail, ...rows } = grade; return rows;
 }
-
-export async function allControls({ events = 300, asks = 18 } = {}) {
-  const shop = {}, day = {};
-  for (const m of ["perfect", "forgetful", "repeats", "idle"]) { shop[m] = await shopControl(m, events); day[m] = dayControl(m, asks); }
-  return { shop, day };
-}

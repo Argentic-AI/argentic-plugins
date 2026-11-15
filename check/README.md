@@ -1,11 +1,13 @@
 # @argentic-ai/check
 
-Run our shop shift and our coordinator day yourself. Same scripted scenario for both arms, scored by code, on your own keys, with a spend cap you set.
+One harness for running a scripted agent scenario yourself. Same script for both arms, scored by code, on your own keys, with a spend cap you set. The harness knows nothing about any one scenario: each scenario is a **suite**, and `list` shows the ones that ship with this version.
 
-- **Shop shift.** An agent runs a small online shop through hundreds of events: orders, price changes, refund requests, supplier deliveries, questions from the CEO. Code scores what it remembers from earlier (preferences, promised refunds, price changes, the refund window), whether the stock counts are exact, and whether it paid a refund twice.
-- **Coordinator day.** An agent runs a crew of workers for one person across a simulated day. Code scores whether follow-ups reached the right worker, whether any ask was lost or started twice, whether the person's standing rules held, what it remembered, and whether its status reports were honest. This one is early: we have run it on only a few seeds, and our own runs showed gaps we are still working on.
+| suite | what it is |
+|---|---|
+| `shop` (shop shift) | An agent runs a small online shop through hundreds of events: orders, price changes, refund requests, supplier deliveries, questions from the CEO. Code scores what it remembers from earlier (preferences, promised refunds, price changes, the refund window), whether the stock counts are exact, and whether it paid a refund twice. |
+| `day` (coordinator day) | An agent runs a crew of workers for one person across a simulated day. Code scores whether follow-ups reached the right worker, whether any ask was lost or started twice, whether the person's standing rules held, what it remembered, and whether its status reports were honest. This one is early: we have run it on only a few seeds, and our own runs showed gaps we are still working on. |
 
-Each command runs two arms on the same script: a plain windowed loop we wrote (the transcript, with the oldest turns dropped when it grows) and Argentic through the public client. You get one table. It is a spot check on your own keys, not a benchmark: one scenario, one seed, one model. Run a few seeds before you read anything into a difference.
+Each run uses two arms on the same script: a plain windowed loop we wrote (the transcript, with the oldest turns dropped when it grows) and Argentic through the public client. You get one table. It is a spot check on your own keys, not a benchmark: one scenario, one seed, one model. Run a few seeds before you read anything into a difference.
 
 ## Run it
 
@@ -14,35 +16,62 @@ You need an Anthropic key and an Argentic key (https://getargentic.com/platform)
 ```
 export MODEL_KEY=sk-ant-...
 export ARGENTIC_API_KEY=aek_...
-npx @argentic-ai/check shop --cap-usd 0.5
+npx @argentic-ai/check run shop --cap-usd 0.5
 ```
+
+`run shop` and `shop` are the same command; every suite id works as a command.
 
 fish:
 
 ```
 set -x MODEL_KEY sk-ant-...
 set -x ARGENTIC_API_KEY aek_...
-npx @argentic-ai/check shop --cap-usd 0.5
+npx @argentic-ai/check run shop --cap-usd 0.5
 ```
 
 It prints an estimate and the cap, then waits for you to confirm (`--yes` skips the question; without a terminal and without `--yes` it refuses to start).
 
 ```
-npx @argentic-ai/check day --cap-usd 0.3
+npx @argentic-ai/check run day --cap-usd 0.3
 ```
+
+Free, no keys: `npx @argentic-ai/check list` shows the suites, and `npx @argentic-ai/check controls` runs scripted agents (a perfect one, a forgetful one, one that repeats every action, one that does nothing) against each scorer.
 
 | flag | |
 |---|---|
 | `--cap-usd N` | Required. The most the run will spend in total. Each arm gets an equal share and stops when it reaches it; the table then marks that arm INCOMPLETE and scores against the whole scenario, so a stopped run cannot look better by being shorter. |
-| `--events N` | Shop only. Events in the shift. Default 300. Our published runs used 900. |
-| `--asks N` | Day only. Asks in the day. Default 18. Our multi-seed runs used 54. |
+| `--size N` | How long the scenario is. Every suite takes it, and each has its own name for it: `--events N` for shop (default 300; our published runs used 900) and `--asks N` for day (default 18; our multi-seed runs used 54). |
+| `--window-tokens N` | Shop only. The plain loop's window. Default 40000. |
 | `--seed N` | Scenario seed. Defaults to ours; change it to run a different shift. |
-| `--arms plain,argentic` | Default both. One arm halves the cost. |
+| `--arms plain,argentic` | Default every arm the suite has. One arm halves the cost. |
 | `--model ID` | Default `claude-haiku-5-5`. Another model needs `--prices in,out,cache_hit,cache_write` (USD per million tokens), so the cap means something. |
 | `--out DIR` | Where run files go. Default `./check-runs`. |
 | `--base-url URL` | Argentic API. Default `https://api.getargentic.com`. |
 
 Set `ANTHROPIC_BASE_URL` to send the plain loop's calls through a proxy.
+
+## Add a suite
+
+A suite is one file that default-exports an object; nothing in the harness changes. It names the scenario, its length knob, its arms (each with a cost estimate and a `run` function that stops itself at the cap it is handed), and how to print the result:
+
+```js
+export default {
+  id: "my-suite", title: "My suite", blurb: "one plain sentence",
+  size: { flag: "rounds", unit: "rounds", default: 50 }, seed: 1, flags: {},
+  arms: {
+    mine: { label: "my agent", estimate: (n) => ({ usd: 0.002 * n, minutes: n / 10 }),
+            run: async (ctx) => ({ spent_usd: 0, complete: true /* ...your scores */ }) },
+  },
+  describe: (size, seed) => `My suite: ${size} rounds, seed ${seed}`,
+  report: (results, meta) => "a table",
+};
+```
+
+```
+npx @argentic-ai/check run ./my-suite.mjs --cap-usd 1
+```
+
+`ctx` carries the run folder, the size and seed, this arm's share of the cap, the model and its prices, both keys, and the API URLs. An arm that needs an Argentic key sets `argentic: true` and the harness checks for it. A suite file is code that runs with your keys in its environment, so read one before you run it. The harness gives every suite the same refusals: no cap, no run; no confirmation, no run; an arm that hits its cap is marked INCOMPLETE and scored against the whole scenario.
 
 ## What it costs
 
@@ -59,9 +88,9 @@ The plain loop has no run of ours at shop size, so its figure is the least certa
 
 ## The rows
 
-Shop shift: **earlier facts** are the questions about preferences, promised refunds, price changes and the refund window, answered right out of the total asked. **Stock exact** is the CEO's stock-count questions answered with the exact number. **Old prices** are quote questions answered with a price that had since changed. **Refunded twice** counts refund calls made for an order that was already refunded. These are the same rows as the November shop-shift page at https://getargentic.com/research/long-run-november/.
+Shop: **earlier facts** are the questions about preferences, promised refunds, price changes and the refund window, answered right out of the total asked. **Stock exact** is the CEO's stock-count questions answered with the exact number. **Old prices** are quote questions answered with a price that had since changed. **Refunded twice** counts refund calls made for an order that was already refunded. These are the same rows as the November shop-shift page at https://getargentic.com/research/long-run-november/.
 
-Coordinator day: **routing**, **asks started once**, **rules kept**, **earlier facts**, **status F1** and **duplicate workers**, from the lab's scorer. No composite score.
+Day: **routing**, **asks started once**, **rules kept**, **earlier facts**, **status F1** and **duplicate workers**, from the lab's scorer. No composite score.
 
 ## Same files as the lab's
 

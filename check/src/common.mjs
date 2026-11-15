@@ -38,13 +38,7 @@ export function resolveModel(flags, env) {
   return { id, prices, provider: "anthropic" };
 }
 
-// Rough per-arm cost. From our own runs on Haiku 5.5: the shop shift cost about $0.0005 per event on Argentic (900 events, $0.41 to $0.52);
-// the plain loop has no run of ours at this size, so its figure is a guess. The cap is the guarantee, not this number.
-export const ESTIMATE = {
-  shop: { argentic: (events) => 0.00055 * events, plain: (events) => 0.0008 * events, minutesPer100: { argentic: 20, plain: 8 } },
-  // day, from our own runs on Haiku 5.5 (v2 and seeds3): 18 asks cost $0.06 on Argentic ($0.045 plain), 54 asks $0.13 to $0.21 ($0.10 to $0.13 plain)
-  day: { argentic: (asks) => 0.0035 * asks, plain: (asks) => 0.0027 * asks, minutesPerAsk: { argentic: 0.4, plain: 0.15 } },
-};
+// Rough per-arm cost, printed before a run. Each suite's arms carry their own estimate (from our own runs on Haiku 5.5); the cap is the guarantee, not these numbers.
 export function estimateText(rows, capUsd) {
   const lines = rows.map((r) => `  ${r.arm.padEnd(10)} about ${usd(r.usd)}${r.minutes ? `, roughly ${r.minutes} min` : ""}`);
   const total = rows.reduce((s, r) => s + r.usd, 0);

@@ -1,7 +1,7 @@
 {
   "name": "@argentic-ai/check",
   "version": "0.1.2",
-  "description": "Run our shop shift and coordinator day yourself, with your own keys and a hard spend cap: a plain loop against Argentic on the same scripted scenario, scored by code.",
+  "description": "Run scripted agent scenarios yourself, with your own keys and a hard spend cap: a plain loop against Argentic on the same script, scored by code. Ships a shop shift and a coordinator day; add your own suite.",
   "license": "MIT",
   "type": "module",
   "engines": { "node": ">=22" },
