@@ -1,7 +1,7 @@
 {
   "name": "@argentic-ai/check",
-  "version": "0.1.2",
-  "description": "Run our shop shift and coordinator day yourself, with your own keys and a hard spend cap: a plain loop against Argentic on the same scripted scenario, scored by code.",
+  "version": "0.2.0",
+  "description": "Run scripted agent scenarios yourself, with your own keys and a hard spend cap: a plain loop against Argentic on the same script, scored by code. Ships a shop shift, a coordinator day and longshift; add your own suite.",
   "license": "MIT",
   "type": "module",
   "engines": { "node": ">=22" },
@@ -16,7 +16,7 @@
   },
   "repository": { "type": "git", "url": "git+https://github.com/Argentic-AI/argentic-plugins.git", "directory": "check" },
   "homepage": "https://getargentic.com/research/check/",
-  "keywords": ["agents", "benchmark", "testing", "long-running", "context", "llm", "cli"],
+  "keywords": ["agents", "longshift", "benchmark", "testing", "long-running", "context", "llm", "cli"],
   "publishConfig": { "access": "public", "provenance": true },
   "bugs": { "url": "https://github.com/Argentic-AI/argentic-plugins/issues" }
 }

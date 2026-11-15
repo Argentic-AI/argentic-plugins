@@ -56,6 +56,87 @@
       "path": "day/plain-loop.mjs",
       "source": "public-benchmark/coordinator-day/plain-loop.mjs",
       "sha256": "9b2ca21681242b705ab5a6a512f06321e6e29b7deea5cee8df11178bbc3cbf9e"
+    },
+    {
+      "path": "longshift/core/adapter.mjs",
+      "source": "longshift/kit/core/adapter.mjs",
+      "sha256": "4b23dc5e149b636c16cf7cd76363e8504d5c66cc3d73b88b81160640d0d369b4"
+    },
+    {
+      "path": "longshift/core/controls.mjs",
+      "source": "longshift/kit/core/controls.mjs",
+      "sha256": "cf4753bae91daa065719c39dfe50af512c0b14d1aeefac28d389053eb14df1ef"
+    },
+    {
+      "path": "longshift/core/drive-core.mjs",
+      "source": "longshift/kit/core/drive-core.mjs",
+      "sha256": "b97b55699165406941cbbae8215827e76d5968a5d062226889899d8bc319291d"
+    },
+    {
+      "path": "longshift/core/gen.mjs",
+      "source": "longshift/kit/core/gen.mjs",
+      "sha256": "d25198676f6242ed86dd9c7c4868057557d77000042861ef4c8bac23a98893f5"
+    },
+    {
+      "path": "longshift/core/generate-reexport.mjs",
+      "source": "longshift/kit/core/generate-reexport.mjs",
+      "sha256": "bc5a1b7c9b929f3841372935a1f3b941a7b68be251afd937f4caaec5b80f51a7"
+    },
+    {
+      "path": "longshift/core/grade.mjs",
+      "source": "longshift/kit/core/grade.mjs",
+      "sha256": "c71d1b9574fbd7b22b6891c93f398bc542672e64a7a243b1b0adc0beaa889ae0"
+    },
+    {
+      "path": "longshift/core/phrasing.mjs",
+      "source": "longshift/kit/core/phrasing.mjs",
+      "sha256": "2113ff0af5e509bca655f32f6c260d9642ff8418d194905e02295a5640e7e952"
+    },
+    {
+      "path": "longshift/core/prompt.mjs",
+      "source": "longshift/kit/core/prompt.mjs",
+      "sha256": "de26e2e1878e63ace1d69c5868dbd77a7dd5286453b7180c0ba30738294bf6bd"
+    },
+    {
+      "path": "longshift/core/truth.mjs",
+      "source": "longshift/kit/core/truth.mjs",
+      "sha256": "b1f5de0cc2ecd53efa06daa1d4a0acab8f40c5f2604ceb277b478c697ec0ac12"
+    },
+    {
+      "path": "longshift/core/util.mjs",
+      "source": "longshift/kit/core/util.mjs",
+      "sha256": "e6fbdfecf830392fe162123330861583fb6821267485a9041616a2b725752339"
+    },
+    {
+      "path": "longshift/core/world.mjs",
+      "source": "longshift/kit/core/world.mjs",
+      "sha256": "930e53001f7c9b6fdd81cfbed044a4bc6e800ee3b7c6f9358ee53d9dad0a6a23"
+    },
+    {
+      "path": "longshift/adapters/argentic.mjs",
+      "source": "longshift/kit/adapters/argentic.mjs",
+      "sha256": "73832f983f40c21a55a7211fe60057d9804e0fc5e0f1bf795d86c1b47883e129"
+    },
+    {
+      "path": "longshift/adapters/plain-loop.mjs",
+      "source": "longshift/kit/adapters/plain-loop.mjs",
+      "sha256": "fd0d1fba865d2e095dfea8d07f0bd3d2fcc3db4ccec4bfd60743b1ee0429430a"
+    },
+    {
+      "path": "longshift/LICENSE",
+      "source": "longshift/kit/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "longshift/LICENSE-DATA.txt",
+      "source": "longshift/kit/LICENSE-DATA.txt",
+      "sha256": "af59ee78657fdc254f519f4688edb77dd460ea9d69492fb3af857991230aa008"
+    },
+    {
+      "path": "longshift/NOTICE",
+      "source": "longshift/kit/NOTICE",
+      "sha256": "e4049a24c2f4c79b697355b6f1e0d9da46c5186b66ff2b951c4a33332201adde"
     }
-  ]
+  ],
+  "longshift_copied_on": "2026-11-15"
 }

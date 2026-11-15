@@ -74,4 +74,16 @@ const tmp = () => mkdtempSync(join(tmpdir(), "check-arms-"));
   check("run files include result.json", !!dirs && existsSync(join(dirs, "result.json")) && JSON.parse(readFileSync(join(dirs, "result.json"), "utf8")).results.length === 2);
   await a.close(); await g.close();
 }
+
+// ---- longshift, both arms, an agent that only reads: the plumbing, the by-hour curves and the report (the scorer's range is checked free in 01)
+{
+  const a = await fakeAnthropic({ decide: idleDay }), g = await fakeArgentic({ decide: idleDay }), out = tmp();
+  const env = { MODEL_KEY: "sk-test", ARGENTIC_API_KEY: "aek_test", ANTHROPIC_BASE_URL: a.url }, lines = [], errs = [];
+  const code = await main(["run", "longshift", "--cap-usd", "3", "--hours", "3", "--plain-variant", "keep", "--yes", "--out", out, "--base-url", g.url], env, { out: (s) => lines.push(s), err: (s) => errs.push(s) });
+  const text = lines.join("\n"), dir = text.match(/Run files: (.*)/)?.[1], saved = dir && JSON.parse(readFileSync(join(dir, "result.json"), "utf8"));
+  check("longshift runs both arms to the end of the shift and prints one report", code === 0 && /Longshift: 3-hour shift/.test(text) && /Argentic built longshift and also enters it/.test(text) && /conflicting updates/.test(text) && saved?.results.length === 2 && saved.results.every((r) => r.complete), `${code} ${errs.join(" ")} ${text.slice(-300)}`);
+  check("longshift report has accuracy and prompt size by hour", /by hour of the shift/.test(text) && Object.keys(saved?.results[0]?.prompt_by_hour ?? {}).length >= 3 && Object.keys(saved?.results[1]?.prompt_by_hour ?? {}).length >= 3, JSON.stringify(saved?.results[0]?.prompt_by_hour));
+  check("longshift names the engine build and the plain variant it ran", /engine build fake-build/.test(text) && saved.results[0].variant === "keep" && saved.meta.hours === 3);
+  await a.close(); await g.close();
+}
 finish();
