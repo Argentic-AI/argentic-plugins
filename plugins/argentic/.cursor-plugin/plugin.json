@@ -2,7 +2,7 @@
   "name": "argentic",
   "displayName": "Argentic",
   "version": "0.3.1",
-  "description": "Argentic MCP server: run and inspect long-running agents on Argentic.",
+  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to wake agents and manage your account.",
   "author": {
     "name": "Argentic",
     "url": "https://getargentic.com"

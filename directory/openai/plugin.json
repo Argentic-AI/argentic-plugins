@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "argentic",
   "version": "0.3.2",
-  "description": "Argentic MCP server: run and inspect long-running agents on Argentic.",
+  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to wake agents and manage your account.",
   "author": { "name": "Argentic", "url": "https://getargentic.com" },
   "homepage": "https://getargentic.com/docs",
   "license": "MIT",
@@ -19,7 +19,7 @@
       },
       "interface": {
         "displayName": "Argentic",
-        "shortDescription": "Run and inspect long-running agents.",
+        "shortDescription": "Keeps AI agents right for hours.",
         "developerName": "Argentic",
         "category": "Developer Tools",
         "capabilities": ["Read", "Write"],
