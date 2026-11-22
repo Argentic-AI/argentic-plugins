@@ -2,6 +2,8 @@
 
 [Argentic](https://getargentic.com/docs) is an engine that keeps AI agents right for hours while prompt size is bounded. This repo connects your coding agent to it: wake agents, give them tools, and manage your API keys, usage and budget.
 
+If your agent runs out of context and gets worse after many tokens, that is the problem the engine is for. [How it compares with Lossless Claw, Hindsight, Mem0 and Letta](https://getargentic.com/blog/my-agent-gets-worse-over-long-runs/), read from each one's own docs.
+
 This repo holds only manifests, skills, MCP settings and small client adapters. The engine is not in it.
 
 There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account (OAuth) and pick an organization. No API key is needed for the MCP. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
@@ -71,9 +73,9 @@ Export `MODEL_KEY` where Codex starts, then sign in with `codex mcp login argent
 
 The HTTP API still works on its own: `POST /v1/agents/{agent}/wake` and the other routes take an API key (`aek_...`, created by the `create_api_key` tool or in the dashboard) as `Authorization: Bearer`, plus `X-Model-Key` to wake. See the [docs](https://getargentic.com/docs).
 
-## Bring your own framework
+## Bring your tools
 
-Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Hand the loop to Argentic and keep the tools. [`adapters/`](adapters/) has one small adapter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. To try Argentic with nothing to write, see [Try it](#try-it); the Python package still has `python -m argentic_ai demo`.
+Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Bring your tools, your prompt and your model key. Argentic runs the loop and replaces your framework's. [`adapters/`](adapters/) has one small tool converter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. To try Argentic with nothing to write, see [Try it](#try-it); the Python package still has `python -m argentic_ai demo`.
 
 ## Ask your agent to do it
 
