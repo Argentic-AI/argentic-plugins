@@ -50,6 +50,10 @@ Send `tools` with each wake, or store them once with `PUT /v1/agents/{agent}/too
 
 The loop: wake, read `actions`, do them, wake again with what happened.
 
+## Send only what is new
+
+Argentic keeps the agent's history. Each `argentic_wake` carries only what happened since the last one: the user's new message, or what your tools returned. Do not paste earlier messages or the agent's replies back in, and do not send a transcript. The agent already has them, and every copy lands in its journal a second time. A call that repeats an earlier message or reply is refused with `history_resent` before anything runs, and costs nothing. If you see it, send the new event alone.
+
 ## When a call does not answer
 
 Every wake is recorded before it runs. If a wake times out, the connection drops or it stops on a cap:
