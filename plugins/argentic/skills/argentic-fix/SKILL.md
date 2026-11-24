@@ -1,6 +1,6 @@
 ---
 name: argentic-fix
-description: Use when an Argentic run stopped or the user asks why ("why did my run stop", "resume it", "approve it", "it hit a cap"). Finds the cause from the wake and its replay check, proposes a fix, resumes only after the user says yes.
+description: Use when an Argentic run stopped or the user asks why ("why did my run stop", "resume it", "it hit a cap"). Finds the cause from the wake and its replay check, proposes a fix, resumes only after the user says yes.
 ---
 
 # Fix a run that stopped
@@ -26,11 +26,10 @@ Resuming a run spends money on the user's model key. Find the cause first, say i
 | `time_cap` | It ran out of time. | Resume. It continues. |
 | `error`, `bad_model`, `model_key_rejected` | The model call failed or the provider refused. Nothing was spent. | Fix the model id or the key, then resume. The reply says why. |
 | `model_key_required` | The model key header is missing. | Use `argentic-setup`. The user adds the key to the connection. |
-| `approval_required` | A cap was hit and approvals are on for the account. | List them with `argentic_approvals`. Ask the human. |
 
-## Approvals
+## Raising a cap
 
-Never approve on your own. `argentic_answer_approval` lets an agent spend more. Show the user what is waiting (the agent, the amount, why), ask, and answer only with what they said. It needs an owner or admin.
+A cap stopped the run. Ask the human whether to raise the budget with `set_budget`, then resume. Never raise it on your own.
 
 ## What resume does
 

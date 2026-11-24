@@ -22,7 +22,6 @@ One MCP, `argentic`, signed in with the user's Argentic account and an organizat
 | `argentic_wakes`, `argentic_wake_get` | find wakes that never answered, read one wake | no |
 | `argentic_replay` | check a run's proof: the journal still reproduces what the model was shown | no |
 | `argentic_due` | list plans whose wake time has passed | no |
-| `argentic_approvals`, `argentic_answer_approval` | spend-cap requests (answering needs owner or admin) | approving lets an agent spend more |
 
 Three more skills: `argentic-quickstart` adds Argentic to a project, `argentic-status` shows what your agents did, `argentic-fix` finds why a run stopped.
 
@@ -38,7 +37,7 @@ Account questions (usage, budget, API keys) use the account tools. Without the M
 
 ## Statuses
 
-`done` finished. `queued` another call is running. `spend_cap` or `budget_cap` a limit stopped it and the work so far is kept. `turn_cap` ran out of turns. `error` the model call failed (the reply says why). `approval_required` a cap was hit and approvals are on for the account; ask the human before approving anything.
+`done` finished. `queued` another call is running. `spend_cap` or `budget_cap` a limit stopped it and the work so far is kept. `turn_cap` ran out of turns. `error` the model call failed (the reply says why). A cap stops the run and keeps its work. To go on, someone raises the budget and the run is resumed. Ask the human before you raise it.
 
 Errors come back as `{ error, detail }`. The ones you will meet: `unauthorized` (sign in again via `/mcp`), `rate_limited` (wait `retry_after`), `bad_request` (read `detail`), `bad_model` and `model_key_rejected` (the provider refused; nothing was spent), `payment_required`.
 

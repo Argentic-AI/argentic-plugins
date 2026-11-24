@@ -143,7 +143,7 @@ export interface Action {
   seq: number
 }
 
-export type WakeStatus = 'done' | 'spend_cap' | 'budget_cap' | 'turn_cap' | 'time_cap' | 'error' | 'approval_required'
+export type WakeStatus = 'done' | 'spend_cap' | 'budget_cap' | 'turn_cap' | 'time_cap' | 'error'
 
 export interface WakeResult {
   status: WakeStatus
