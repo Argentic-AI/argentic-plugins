@@ -378,6 +378,7 @@ class RunResult:
     steps: int
     status: str  # the last wake's status, or "max_steps" when no wake ran
     spent_usd: float
+    wake_at: str | None = None  # when the agent next wants waking (ISO 8601), or None; needs schedule=True. Wake it then with run(fire_due=True)
 
 
 class Ledger:
@@ -388,10 +389,12 @@ class Ledger:
     A missing file starts an empty ledger. A file that cannot be read or parsed is set aside as `<path>.corrupt` and
     `on_corrupt` is told (default: a line on stderr), because an empty ledger means finished actions may run again."""
 
-    def __init__(self, path: str, on_corrupt: Callable[[str], None] | None = None):
+    def __init__(self, path: str | None = None, on_corrupt: Callable[[str], None] | None = None):
         self.path = path
         self.entries: dict[str, Any] = {}
         self.wakes: dict[str, Any] = {}
+        if path is None:  # in memory only: nothing is read or written
+            return
         warn = on_corrupt or (lambda m: print(m, file=sys.stderr))
         try:
             with open(path) as f:
@@ -436,6 +439,8 @@ class Ledger:
         self._save()
 
     def _save(self) -> None:
+        if self.path is None:
+            return
         d = os.path.dirname(os.path.abspath(self.path))
         os.makedirs(d, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=d, prefix=".argentic-ledger-", suffix=".tmp")
@@ -522,9 +527,11 @@ def run(
     *,
     agent: str,
     run_id: str,
-    task: str,
+    task: str | None = None,
     tools: list[Tool],
-    ledger_path: str,
+    ledger_path: str | None = None,
+    fire_due: bool = False,
+    schedule: bool = False,
     model: Mapping[str, Any] | None = None,
     system: str | None = None,
     max_steps: int = 8,
@@ -541,6 +548,12 @@ def run(
     without repeating a finished action. Actions cut off mid-run run again,
     so handlers should use ctx.idempotency_key (at-least-once).
 
+    `task` is the new event: what happened since the agent last ran, never the earlier messages. Pass `fire_due=True`
+    instead (no task) to wake the agent for the plans whose time has come; it costs nothing when none is due.
+    `schedule=True` says your app will wake the agent at the `wake_at` this run returns (`RunResult.wake_at`), so the
+    agent may put a time on a plan; send it on every run of that agent. `ledger_path` is where finished actions are
+    kept across a restart; leave it out and they are kept in memory for this call only, so make handlers safe to repeat.
+
     `model` defaults to FREE_MODEL. Hooks: `on_wake_start(step)` just before each wake is sent (the first answer can
     take several seconds), `on_wake(step, wake_id, status, replayed)` after each answer, where `replayed` means the
     API sent back its stored answer or the ledger kept a stopped one, and `on_action(seq, tool, result, fresh)` for
@@ -549,6 +562,8 @@ def run(
     Each follow-up wake carries the tool results as the message text and, unless `structured_results=False`, as the
     structured `results` field too, so the API journals the real result of every call (a server that does not know
     the field is detected once and not sent it again)."""
+    if fire_due == (task is not None):
+        raise ValueError("run: pass `task` (the new event) or `fire_due=True`, not both and not neither")
     ledger = Ledger(ledger_path)
     by_name = {t.name: t for t in tools}
     declared = [{"name": t.name, "description": t.description or t.name,
@@ -556,6 +571,7 @@ def run(
     wakes: list[str] = []
     spent = 0.0
     reply, status, steps = "", "max_steps", 0
+    wake_at: str | None = None
     previous: list[dict[str, Any]] = []  # [{tool, seq, result}] from the ledger
     fresh = 0  # actions newly executed in this process
 
@@ -573,18 +589,20 @@ def run(
             resp = WakeResponse(**{**kept, "replayed": True})
         else:
             resp = client.wake(
-                agent, message, model=model or FREE_MODEL, idempotency_key=key,
-                system=system, tools=declared, limits=limits,
+                agent, None if (fire_due and step == 0) else message, model=model or FREE_MODEL, idempotency_key=key,
+                system=system, tools=declared, limits=limits, fire_due=fire_due and step == 0, schedule=schedule,
                 results=[{"seq": p["seq"], "result": p["result"]} for p in previous] if structured_results and step > 0 and previous else None,
             )
             if resp.status in _CARRIES_ON and resp.actions:
                 ledger.put_wake(key, {k: v for k, v in vars(resp).items() if k != "replayed"})
         steps = step + 1
-        wakes.append(resp.wake_id)
+        if resp.wake_id:  # a fire_due wake with nothing due has none
+            wakes.append(resp.wake_id)
         spent += resp.spent_usd
         reply, status = resp.reply, resp.status
+        wake_at = resp.wake_at
         note = " (stopped answer kept in the ledger)" if kept is not None else " (answer replayed)" if resp.replayed else ""
-        log(f"step {step}: wake {resp.wake_id} status={resp.status}{note}")
+        log(f"step {step}: wake {resp.wake_id or '(nothing due)'} status={resp.status}{note}")
         if on_wake:
             on_wake(step, resp.wake_id, resp.status, resp.replayed)
 
@@ -625,7 +643,7 @@ def run(
         if not resp.actions or not (resp.status == "done" or resp.status in _CARRIES_ON):
             break
 
-    return RunResult(reply=reply, wakes=wakes, steps=steps, status=status, spent_usd=spent)
+    return RunResult(reply=reply, wakes=wakes, steps=steps, status=status, spent_usd=spent, wake_at=wake_at)
 
 
 def run_durable(*args: Any, **kwargs: Any) -> RunResult:

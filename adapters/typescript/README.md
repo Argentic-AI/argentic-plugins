@@ -49,7 +49,7 @@ const out = await run({
 console.log(out.reply)
 ```
 
-Keep `agent` and `runId` the same across restarts. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `run` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
+`task` is the new event: what happened since the agent last ran, never the earlier messages. Keep `agent` and `runId` the same when a run is retried (the id of the event that woke the agent is a good `runId`). `ledgerPath` is optional: with it, finished actions are written to that file so a killed process does not run them twice; without it they are kept in memory for the call, so make your tools safe to repeat with the `ctx.idempotencyKey` your `execute` receives. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `run` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
 
 ## Once per operation (`once_per`, 0.1.7)
 
@@ -70,17 +70,17 @@ const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: 
 
 ## Waking the agent later
 
-Argentic has no clock of its own: your app decides when an agent runs. Send `schedule: true` on the agent's wakes so it can put a time on a plan. Every answer then has `wake_at`, the time the agent next wants waking, or `null`. Keep the latest one per agent in your own scheduler (a cron job, a delayed queue job) and at that time wake the agent with `fire_due`:
+Argentic has no clock of its own: your app decides when an agent runs. Pass `schedule: true` to `run` so the agent can put a time on a plan. The result's `wakeAt` is the time it next wants waking (an ISO time, already past if a plan is due), or `null`. Keep it in your own scheduler (a cron job, a delayed queue job) and wake the agent then with `fireDue: true`, which takes the place of `task`:
 
 ```ts
-const out = await client.wake('support-bot', { message: 'Chase the refund on Friday.', model: freeModel, schedule: true }, 'chase-1')
-if (out.wake_at) await queue.add('wake-support-bot', {}, { delay: Date.parse(out.wake_at) - Date.now() })
+const out = await run({ client, agent: 'support-bot', runId: event.id, task: event.text, tools, schedule: true })
+if (out.wakeAt) await queue.add('wake-support-bot', {}, { delay: Math.max(1000, Date.parse(out.wakeAt) - Date.now()) })
 
-// later, in that job:
-const next = await client.wake('support-bot', { fire_due: true, model: freeModel, schedule: true })
+// later, in that job: the agent's tools run as before, and the result has the next wakeAt
+const next = await run({ client, agent: 'support-bot', runId: `due-${Date.now()}`, fireDue: true, tools, schedule: true })
 ```
 
-A `fire_due` wake with nothing due makes no model call and costs nothing. `client.due()` lists every plan whose time has passed, if your scheduler loses track.
+A `fireDue` wake with nothing due makes no model call and costs nothing. With `client.wake()` the same fields are `schedule: true`, `fire_due: true` and the answer's `wake_at`. `client.due()` lists every plan whose time has passed, if your scheduler loses track.
 
 ## What to know
 
