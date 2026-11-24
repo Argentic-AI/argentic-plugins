@@ -7,7 +7,7 @@ description: Use when the user wants to connect to Argentic, the argentic MCP se
 
 ## What you need
 
-1. An Argentic account. The MCP signs in with it (OAuth) and asks which organization to use. No API key is needed.
+1. An Argentic account. The MCP signs in with it and asks which organization to use. Sign-in is CIMD only (Client ID Metadata Documents): there is no client ID or client secret to get from Argentic, no dynamic client registration, and no API key to paste into the app. Do not ask the user for a client ID. Only allow-listed apps can sign in (Claude, Codex, VS Code); anything else uses the API key route below.
 2. For waking agents only: the user's own key for a model provider (OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, Together, Fireworks, Mistral, xAI or NVIDIA, or any OpenAI-compatible https endpoint). Reading memory, usage and the other tools does not need it.
 
 Never ask the user to paste a key into the chat. Point them at the place the key goes and let them put it there. The model key goes in the `X-Model-Key` header, never in a tool argument.
