@@ -198,6 +198,7 @@ export function hintFor(e: unknown): string | undefined {
   const code = (e.body as { error?: string } | undefined)?.error
   if (e.status === 401) return 'Check ARGENTIC_API_KEY. A key only works on the API it was made for, so if you set ARGENTIC_BASE_URL, make the key in that dashboard.'
   if (code === 'model_key_rejected') return 'Your model provider refused MODEL_KEY. Check it is a key for the provider in the error (a free NVIDIA key starts with nvapi-).'
+  if (code === 'bad_embed_key') return 'The API cannot use EMBED_KEY as sent: EMBED_PROVIDER is cohere (the default) or bedrock, EMBED_REGION goes with bedrock only, and the key has no spaces. Unset EMBED_KEY to recall by words alone.'
   if (code === 'bad_model') return 'Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves, or unset it for the free default.'
   if (e.status === 402) return 'This account hit its usage limit. Argentic is free in beta, so there is nothing to buy: email hi@getargentic.com and we will raise it.'
   if (e.status === 429) return 'Too many requests a minute for this key. Wait for the time in the error and run the same command again.'
@@ -219,6 +220,15 @@ export interface ClientOptions {
   apiKey?: string
   /** Sent as X-Model-Key on wake. Defaults to the MODEL_KEY environment variable. */
   modelKey?: string
+  /**
+   * Your embedding provider key, sent as X-Embed-Key on wake, so the agent's recall also finds what was said in other words. Defaults to the
+   * EMBED_KEY environment variable; without one, recall works by words. Never stored by Argentic; your provider bills you for it.
+   */
+  embedKey?: string
+  /** Sent as X-Embed-Provider: `cohere` (the default) or `bedrock`. Defaults to the EMBED_PROVIDER environment variable. */
+  embedProvider?: string
+  /** Sent as X-Embed-Region, for `bedrock` (default `us-east-1`). Defaults to the EMBED_REGION environment variable. */
+  embedRegion?: string
   baseUrl?: string
   /** How long one request may take before that try counts as a network failure, in milliseconds. Default 300000; 0 means no limit. */
   timeoutMs?: number
@@ -235,6 +245,7 @@ const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 export class Argentic {
   private readonly apiKey: string
   private readonly modelKey?: string
+  private readonly embed: Record<string, string>
   private readonly baseUrl: string
   private readonly timeoutMs: number
   private readonly doFetch: typeof fetch
@@ -247,6 +258,12 @@ export class Argentic {
   constructor(opts: ClientOptions = {}) {
     this.apiKey = opts.apiKey ?? process.env.ARGENTIC_API_KEY ?? ''
     this.modelKey = opts.modelKey || process.env.MODEL_KEY || undefined
+    const embedKey = opts.embedKey || process.env.EMBED_KEY || undefined
+    const embedProvider = opts.embedProvider || process.env.EMBED_PROVIDER || undefined
+    const embedRegion = opts.embedRegion || process.env.EMBED_REGION || undefined
+    this.embed = embedKey
+      ? { 'X-Embed-Key': embedKey, ...(embedProvider ? { 'X-Embed-Provider': embedProvider } : {}), ...(embedRegion ? { 'X-Embed-Region': embedRegion } : {}) }
+      : {}
     this.timeoutMs = opts.timeoutMs ?? defaultTimeoutMs
     this.baseUrl = (opts.baseUrl ?? process.env.ARGENTIC_BASE_URL ?? defaultBaseUrl).replace(/\/+$/, '')
     this.doFetch = opts.fetch ?? fetch
@@ -269,6 +286,7 @@ export class Argentic {
       'Idempotency-Key': idempotencyKey,
     }
     if (this.modelKey) headers['X-Model-Key'] = this.modelKey
+    Object.assign(headers, this.embed)
     const path = `/v1/agents/${encodeURIComponent(agent)}/wake`
     const { results, ...plain } = body
     let res: Response

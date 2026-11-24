@@ -39,7 +39,8 @@ const tools = { refund_order: tool({
   execute: async (args, { toolCallId }) => refund(args, toolCallId),
 }) }
 
-// apiKey defaults to ARGENTIC_API_KEY and modelKey to MODEL_KEY
+// apiKey defaults to ARGENTIC_API_KEY, modelKey to MODEL_KEY, and embedKey to EMBED_KEY
+// (optional: with it, the agent's recall also finds what was said in other words)
 const client = new Argentic()
 const out = await run({
   client, agent: 'my-agent', runId: 'order-1182', ledgerPath: '.argentic-ledger.json',

@@ -74,6 +74,19 @@ class ClientTest(unittest.TestCase):
             self.wake(self.client(server))
         self.assertNotIn("x-model-key", server.requests[0][1])
 
+    def test_the_embedding_key_comes_from_the_environment_and_rides_on_every_wake(self):
+        server = self.serve(lambda *a: (200, OK, None))
+        with mock.patch.dict(os.environ, {"EMBED_KEY": "co-env", "EMBED_PROVIDER": "bedrock", "EMBED_REGION": "ap-southeast-2"}, clear=True):
+            self.wake(self.client(server))
+        headers = server.requests[0][1]
+        self.assertEqual((headers["x-embed-key"], headers["x-embed-provider"], headers["x-embed-region"]), ("co-env", "bedrock", "ap-southeast-2"))
+
+    def test_no_embedding_key_means_no_embed_headers(self):
+        server = self.serve(lambda *a: (200, OK, None))
+        with mock.patch.dict(os.environ, {"EMBED_PROVIDER": "bedrock"}, clear=True):
+            self.wake(self.client(server))
+        self.assertFalse([h for h in server.requests[0][1] if h.startswith("x-embed-")])
+
     def test_system_tools_and_limits_are_sent_only_when_given(self):
         server = self.serve(lambda *a: (200, OK, None))
         c = self.client(server)

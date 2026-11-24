@@ -118,10 +118,12 @@ A `fire_due` wake with nothing due makes no model call and costs nothing. `clien
 |---|---|
 | `ARGENTIC_API_KEY` | Your Argentic API key (`aek_...`). |
 | `MODEL_KEY` | Your model provider's key, sent as `X-Model-Key`. Argentic never stores it. |
+| `EMBED_KEY` | Your embedding provider's key, sent as `X-Embed-Key`. With it, the agent's recall also finds what was said in other words; without it, recall goes by words. Argentic never stores it, and your provider bills you for the embedding calls. |
+| `EMBED_PROVIDER`, `EMBED_REGION` | `cohere` (the default) or `bedrock`, and for `bedrock` the region your key calls (default `us-east-1`). |
 | `ARGENTIC_BASE_URL` | The API address. Unset, it is `https://api.getargentic.com`. |
 | `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | A model other than the free default, read by `model_from_env()`. Prices are dollars per million tokens. With no `ARGENTIC_MODEL_ID` you get `FREE_MODEL`. |
 
-`Argentic(api_key=..., model_key=..., base_url=..., timeout=300)` takes the same things as arguments. A 409 (the agent is mid-run) waits and sends the same request again, and a 5xx or a network failure retries with the same key after 1, 2, 4 and 8 seconds, so a retry never adds a message twice. `backoff=` and `max_queued_waits=` change both. If the ledger file is not valid JSON, `run` warns on stderr, sets it aside as `<path>.corrupt` and starts empty, so finished actions may run again. Errors are `ArgenticError` with `.status` (None when no answer came back) and `.body`; `hint_for(error)` returns a next step for the ones a first run tends to hit.
+`Argentic(api_key=..., model_key=..., embed_key=..., base_url=..., timeout=300)` takes the same things as arguments. A 409 (the agent is mid-run) waits and sends the same request again, and a 5xx or a network failure retries with the same key after 1, 2, 4 and 8 seconds, so a retry never adds a message twice. `backoff=` and `max_queued_waits=` change both. If the ledger file is not valid JSON, `run` warns on stderr, sets it aside as `<path>.corrupt` and starts empty, so finished actions may run again. Errors are `ArgenticError` with `.status` (None when no answer came back) and `.body`; `hint_for(error)` returns a next step for the ones a first run tends to hit.
 
 ## Honest limits
 
