@@ -6,7 +6,7 @@ If your agent runs out of context and gets worse after many tokens, that is the 
 
 This repo holds only manifests, skills, MCP settings and small client adapters. The engine is not in it.
 
-There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account (OAuth) and pick an organization. No API key is needed for the MCP. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
+There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
 
 ## Try it
 

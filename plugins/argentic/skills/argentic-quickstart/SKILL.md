@@ -69,7 +69,7 @@ Rules:
    print(res.status, res.reply, res.spent_usd)
    ```
 
-   `freeModel` and `model_from_env()` use a free NVIDIA model. For another model, set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` (dollars per million tokens), as the examples README describes. Prices matter: the spend limit counts with them.
+   `freeModel` and `model_from_env()` use a free NVIDIA model. For a first run that shows the engine as it runs in production, use Anthropic `claude-haiku-5-5` with an `sk-ant-` key instead: the engine's prompt-cache breakpoints exist only for the `anthropic` provider, and other providers rely on their own caching. For another model, set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` (dollars per million tokens), as the examples README describes. Prices matter: the spend limit counts with them.
 
    Neither client loads `.env` itself. Run the script with the user's usual way of loading it (`node --env-file=.env`, `python-dotenv`, or the shell).
 6. If the user already has tools, wire them with `run` (TypeScript or Python) and the adapter from the table, as the example does. Keep `agent` and `run_id` the same across restarts.
