@@ -103,7 +103,7 @@ def hint_for(e: BaseException) -> str | None:
 class WakeResponse:
     """What a wake answered. `raw` is the whole JSON body, for fields this class does not name."""
 
-    status: str  # done, turn_cap, time_cap, spend_cap, budget_cap, approval_required or error
+    status: str  # done, turn_cap, time_cap, spend_cap, budget_cap or error
     reply: str
     spent_usd: float
     turns: int

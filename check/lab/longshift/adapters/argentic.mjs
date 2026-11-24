@@ -37,7 +37,7 @@ export async function runArgentic({ name, root, seed = 20261201, hours = 12, den
   }
   const client = new TrackClient({ apiKey, modelKey, baseUrl, timeoutMs: 900_000, fetch: patientFetch });
   const tools = run.world.schemas().map((t) => ({ name: t.name, description: t.description, parameters: t.input_schema, execute: async (args) => maybeJson(run.exec(t.name, args)) }));
-  const agent = `longshift-${name}`, system = system_p1(); let stopReason = null, result = null, segments = 0, segTask = task_p1, nudges = 0; const HARD = new Set(["spend_cap", "budget_cap", "approval_required", "error"]);
+  const agent = `longshift-${name}`, system = system_p1(); let stopReason = null, result = null, segments = 0, segTask = task_p1, nudges = 0; const HARD = new Set(["spend_cap", "budget_cap", "error"]);
   try {
     for (;;) {
       result = await runAgent({ client, agent, runId: `${name}-s${segments}`, task: segTask, system, tools, ledgerPath: run.P("private/client-state.json"), model, maxSteps, limits: { max_turns: maxTurns }, log: (l) => run.logLine(l), onWakeStart: () => { run.beforeCall(); run.noteModelCall(); } });

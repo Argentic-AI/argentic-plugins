@@ -14,9 +14,9 @@ The plugin runs no local code, installs no packages and has no hooks.
 
 Account tools: `get_account`, `get_usage`, `set_budget`, `list_api_keys`, `create_api_key`, `revoke_api_key`.
 
-Agent tools: `argentic_wake`, `argentic_resume`, `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_agents`, `argentic_approvals`, `argentic_answer_approval`.
+Agent tools: `argentic_wake`, `argentic_resume`, `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_agents`.
 
-`argentic_answer_approval` needs an owner or admin on the organization.
+`set_budget` needs an owner or admin on the organization.
 
 ## Install
 

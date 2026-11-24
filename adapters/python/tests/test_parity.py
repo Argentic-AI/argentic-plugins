@@ -88,7 +88,7 @@ class ParityTest(unittest.TestCase):
         self.assertIn("structured_results: bool = True", py)
 
     def test_the_same_statuses_and_the_same_message_to_carry_on(self):
-        for status in ("done", "spend_cap", "budget_cap", "turn_cap", "time_cap", "error", "approval_required"):
+        for status in ("done", "spend_cap", "budget_cap", "turn_cap", "time_cap", "error"):
             self.assertIn(f"'{status}'", self.ts)
         self.assertIn("'Results of the tools you asked for:\\n'", self.ts)
         self.assertIn("Results of the tools you asked for:", open(core.__file__).read())

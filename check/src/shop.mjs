@@ -73,7 +73,7 @@ export async function runShopArgentic({ out, name = "shop-argentic", events: N =
   if (existsSync(metrics)) for (const l of readFileSync(metrics, "utf8").split("\n").filter(Boolean)) { try { const r = JSON.parse(l); if (r.wake_id) wakeSpend.set(r.wake_id, r.spent_usd ?? 0); } catch { /* skip */ } }
 
   let stopReason = null, result = null, progress = 0, lastProgressStep = 0;
-  const HARD = new Set(["spend_cap", "budget_cap", "hard_cap", "daily_cap", "approval_required", "error"]);
+  const HARD = new Set(["spend_cap", "budget_cap", "hard_cap", "daily_cap", "error"]);
   try {
     for (;;) {
       const si = run.segments.length - 1, seg = run.segments[si], offset = run.segments.slice(0, si).reduce((a, g) => a + (g.steps ?? 0), 0);
