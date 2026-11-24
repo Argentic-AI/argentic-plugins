@@ -16,12 +16,10 @@ One MCP, `argentic`, signed in with the user's Argentic account and an organizat
 | tool | what it does | spends money |
 |---|---|---|
 | `argentic_wake` | message an agent, get its reply | yes |
-| `argentic_fire_due` | wake an agent on plans that have fallen due | yes, if something is due |
 | `argentic_resume` | finish a wake that was cut off or stopped on a cap | yes |
 | `argentic_agents` | list your agents, with open and cut-off counts (where available) | no |
 | `argentic_wakes`, `argentic_wake_get` | find wakes that never answered, read one wake | no |
 | `argentic_replay` | check a run's proof: the journal still reproduces what the model was shown | no |
-| `argentic_due` | list plans whose wake time has passed | no |
 | `argentic_approvals`, `argentic_answer_approval` | spend-cap requests (answering needs owner or admin) | approving lets an agent spend more |
 
 Three more skills: `argentic-quickstart` adds Argentic to a project, `argentic-status` shows what your agents did, `argentic-fix` finds why a run stopped.
@@ -32,7 +30,7 @@ Account questions (usage, budget, API keys) use the account tools. Without the M
 
 - The agent id is the memory. The same id keeps the same memory, and different ids never see each other. One id per end user, project or task is the usual shape. Ids are 1 to 64 letters, digits, `-` or `_`.
 - Every wake costs real money on the user's model key. Pass `model.prices` (dollars per million tokens) so the spend limits count correctly, and keep `max_usd` small while testing. Each call carries roughly 2,500 to 5,000 prompt tokens of engine overhead, so one-word test calls are not free.
-- The model key never goes in a tool argument or a message. It travels in the `X-Model-Key` header of the connection, and only wake tools (`argentic_wake`, `argentic_fire_due`, `argentic_resume`) need it. If a wake says `model_key_required`, tell the user to add it to the connection or plugin settings.
+- The model key never goes in a tool argument or a message. It travels in the `X-Model-Key` header of the connection, and only wake tools (`argentic_wake`, `argentic_resume`) need it. If a wake says `model_key_required`, tell the user to add it to the connection or plugin settings.
 - An agent runs one call at a time. A second call while it is running returns `status: "queued"` (HTTP 409 on REST) with `retry_after` seconds. Wait that long and send it again.
 - The agent decides what to remember. It records with built-in tools (`decide`, `supersede`, `plan`, `plan_close`, `recall` and a few more; they show up in `tool_calls.names`). To see what it kept, open the agent in the dashboard (Runs) or read `GET /v1/agents/{agent}/memory`; the MCP no longer has a memory tool. Do not assume a fact was stored because you said it.
 
@@ -70,7 +68,7 @@ The journal is the append-only record of what the agent did. It holds what your 
 
 ## Scheduled work
 
-Agents do not wake themselves. Wake with `schedule: true` and the agent may make plans with a wake time. You poll `argentic_due`, and for each agent with something due call `argentic_fire_due`. If you do not poll, leave `schedule` off; the agent is then told not to promise reminders.
+Agents do not wake themselves, and Argentic keeps no clock. The app does the scheduling: it sends `schedule: true` on `POST /v1/agents/{agent}/wake` so the agent may put a time on a plan, reads `wake_at` from every answer (the time the agent next wants waking, or null), and at that time wakes the agent with `fire_due: true`. A `fire_due` wake with nothing due costs nothing. This is REST only; the MCP wake tools leave `schedule` off, so the agent is told not to promise reminders.
 
 ## Do not claim
 

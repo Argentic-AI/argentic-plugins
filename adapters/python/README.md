@@ -84,40 +84,20 @@ Hooks on `run`: `on_wake_start(step)` just before each wake is sent, `on_wake(st
 
 Each follow-up wake also sends the tool results as the `results` field, `[{"seq": n, "result": ...}]`, next to the message text the model reads, so the API journals the real result of every call (0.1.8). The first wake has none, and a result the ledger already held is sent again like the others. Pass `structured_results=False` to `run` for the text only. If the API does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, pass `results=[...]` with the `message`, never with `fire_due`, at most 100 entries.
 
-## Waking on a schedule (handle_due)
+## Waking the agent later
 
-Create a recurring schedule or a one-shot timer, and read what is due:
-
-```python
-client = Argentic()
-client.put_schedule("support-bot", "morning-check", cron="0 9 * * *", message="Review overnight tickets.")  # five UTC fields
-client.put_schedule("support-bot", "follow-up", at="2026-11-20T09:00:00Z", message="Chase the open refund.")  # one-shot
-client.schedules("support-bot")   # name, cron or at, next_at, last_fired_at, fires
-client.due()                      # what is due now; wake each agent with fire_due, or let the notice below do it
-client.delete_schedule("support-bot", "follow-up")
-```
-
-
-Beta, and off by default on the hosted API. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handle_due` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
-
-Register the address and read the secret with the client: `client.set_wake_url("https://app.example.com/argentic/due")`, then `client.notices()["signing_secret"]` (`whsec_...`). Store it like a password, for example as `ARGENTIC_WEBHOOK_SECRET`. The model key stays on your server: set `MODEL_KEY` there, as for any other wake.
+Argentic has no clock of its own: your app decides when an agent runs. Pass `schedule=True` on the agent's wakes so it can put a time on a plan. Every answer then has `wake_at`, the time the agent next wants waking, or `None`. Keep the latest one per agent in your own scheduler (cron, Celery's `eta`, a delayed queue job) and at that time wake the agent with `fire_due=True`:
 
 ```python
-from fastapi import Body, FastAPI, HTTPException, Request
-from argentic_ai import WebhookVerificationError, handle_due
+out = client.wake("support-bot", "Chase the refund on Friday.", model=FREE_MODEL, idempotency_key="chase-1", schedule=True)
+if out.wake_at:
+    wake_later.apply_async(eta=datetime.fromisoformat(out.wake_at))
 
-app = FastAPI()
-
-@app.post("/argentic/due")
-def due(request: Request, body: bytes = Body()):  # the raw bytes, not parsed JSON
-    try:
-        notice, wake = handle_due(body, request.headers)  # reads ARGENTIC_API_KEY, MODEL_KEY, ARGENTIC_WEBHOOK_SECRET
-    except WebhookVerificationError as e:
-        raise HTTPException(400 if e.code == "bad_body" else 500 if e.code == "bad_secret" else 401, e.code)
-    return {"agent": notice.agent, "wake_id": wake.wake_id}
+# later, in that task:
+client.wake("support-bot", model=FREE_MODEL, idempotency_key=f"due-{out.wake_at}", fire_due=True, schedule=True)
 ```
 
-`handle_due(body, headers, secret=..., client=..., model=..., tolerance_seconds=300)` takes the raw body (`bytes` or `str`) and any mapping of headers, looked up without regard to case, so Flask's `request.get_data()` and `request.headers` work too. It returns `(notice, wake)` and raises `WebhookVerificationError` (with a `.code`) before any call is made. `verify_due(body, headers)` only verifies and parses, and returns `(notice, webhook_id)`, so you can queue the notice and wake later. The wake uses the `webhook-id` as its idempotency key, so a notice delivered twice replays the first wake instead of waking twice. Timestamps more than 300 seconds off are refused. A failed wake raises `ArgenticError`; let it return a 5xx so the notice is sent again.
+A `fire_due` wake with nothing due makes no model call and costs nothing. `client.due()` lists every plan whose time has passed, if your scheduler loses track.
 
 ## Settings
 
