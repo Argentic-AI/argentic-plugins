@@ -104,7 +104,7 @@ When that works, ask whether I also want the Argentic connector installed in thi
 - `argentic-fix` skill: find why a run stopped, then resume it or ask you to approve.
 - `argentic` MCP server, signed in with your Argentic account.
   - Account tools: `get_account`, `list_api_keys`, `create_api_key`, `revoke_api_key`, `get_usage`, `set_budget`.
-  - Agent tools: `argentic_wake`, `argentic_fire_due`, `argentic_resume`, `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_due`, `argentic_agents`, `argentic_approvals`, `argentic_answer_approval`.
+  - Agent tools: `argentic_wake`, `argentic_resume`, `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_agents`, `argentic_approvals`, `argentic_answer_approval`.
   - `argentic_answer_approval` needs an owner or admin. Other tools work as far as your role allows.
 
 MIT licensed.

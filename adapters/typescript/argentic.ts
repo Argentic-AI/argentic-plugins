@@ -1,6 +1,5 @@
 // Argentic core: a small client and a tool loop. No dependencies, Node 22+.
 // Argentic runs the agent loop; your code carries out the tool calls it asks for.
-import { createHmac, timingSafeEqual } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
@@ -114,10 +113,12 @@ export function withOncePer<T extends ToolDecl>(tools: T[], oncePer?: Record<str
 export interface WakeBody {
   /** Required unless `fire_due` is set; the API refuses both together. */
   message?: string
-  /** Wake for the plans, schedules and timers that have fallen due instead of with a message. */
+  /** Wake for the plans that have fallen due instead of with a message: send it at the `wake_at` an earlier answer gave. */
   fire_due?: boolean
   /** Which memory of the agent to wake. Left out, the agent's default. */
   memory?: string
+  /** True when your app wakes the agent at the `wake_at` each answer gives: the agent may then put a time on a plan. Send it on every wake of that agent. */
+  schedule?: boolean
   model: ModelSpec
   system?: string
   /** Facts for this call only (opening hours, the signed-in user's plan), up to 16,000 characters. Not written to the journal or memory; send it again on the next call if the agent still needs it. */
@@ -154,6 +155,8 @@ export interface WakeResult {
   actions?: Action[]
   resumed?: boolean
   error?: string
+  /** When the agent next wants waking (its earliest plan time, already past when one is due), or null. Argentic keeps no clock: wake the agent then with `fire_due: true`. */
+  wake_at?: string | null
   /** True when this key was already answered and the stored answer came back. */
   idempotentReplay: boolean
 }
@@ -201,51 +204,13 @@ export function hintFor(e: unknown): string | undefined {
   return undefined
 }
 
-/** The body of a schedule write: exactly one of `cron` or `at`. */
-export interface ScheduleBody {
-  /** Five numeric UTC fields (numbers, `*`, ranges, lists, steps). Occurrences closer than the host's grid (60 minutes in the beta) are refused. */
-  cron?: string
-  /** A one-shot timer: ISO 8601 with an offset, in the future by at least the grid, at most 366 days ahead. */
-  at?: string
-  /** What the agent is told when it fires, up to 4,000 characters. */
-  message: string
-  enabled?: boolean
-}
-
-export interface Schedule {
-  name: string
-  /** Present on a recurring schedule. */
-  cron?: string
-  /** Present on a one-shot timer, with `timer: true`. */
-  at?: string
-  timer?: true
-  message: string
-  enabled: boolean
-  next_at: string
-  last_fired_at: string | null
-  fires: number
-}
-
-/** One entry of due(): a plan (`plan_id`, `wake_at`), a schedule or timer (`schedule`, `scheduled_at`) or an agent waiting on an event (`reasons`, `since`). */
+/** One entry of due(): a plan whose `wake_at` has passed. */
 export interface DueItem {
   agent: string
   memory?: string
-  plan_id?: number
-  text?: string
-  wake_at?: string
-  schedule?: string
-  scheduled_at?: string
-  timer?: true
-  reasons?: string[]
-  since?: string
-  /** The notice to your wake_url ran out of attempts. */
-  notice_failing?: true
-}
-
-export interface NoticeSettings {
-  wake_url: string | null
-  /** Give this to handleDue / verifyDue as `secret`. */
-  signing_secret: string
+  plan_id: number
+  text: string
+  wake_at: string
 }
 
 export interface ClientOptions {
@@ -337,28 +302,11 @@ export class Argentic {
     }
   }
 
-  /** What is due now: plans past their wake_at, schedules and timers whose time has come, and agents waiting on an answered approval or a hook. Read only; costs nothing. */
+  /** Plans of your agents whose wake_at has passed. Every wake answer already gives `wake_at`; this is for a scheduler that lost track. Read only; costs nothing. */
   async due(opts: { limit?: number } = {}): Promise<DueItem[]> {
     const q = opts.limit === undefined ? '' : `?limit=${encodeURIComponent(String(opts.limit))}`
     const res = await this.send(`/v1/due${q}`, undefined, this.plainHeaders(), 'GET')
     return ((await res.json()) as { due?: DueItem[] }).due ?? []
-  }
-
-  /** Create or replace a recurring schedule (`cron`, five UTC fields) or a one-shot timer (`at`, ISO 8601 with an offset) on an agent. Needs the hosted API to have schedules switched on. */
-  async putSchedule(agent: string, name: string, body: ScheduleBody, opts: { memory?: string } = {}): Promise<Schedule> {
-    const res = await this.send(this.schedulePath(agent, name, opts.memory), JSON.stringify(body), { ...this.plainHeaders(), 'Content-Type': 'application/json' }, 'PUT')
-    return ((await res.json()) as { schedule: Schedule }).schedule
-  }
-
-  /** The schedules and timers of one agent. */
-  async schedules(agent: string, opts: { memory?: string } = {}): Promise<Schedule[]> {
-    const res = await this.send(this.schedulePath(agent, undefined, opts.memory), undefined, this.plainHeaders(), 'GET')
-    return ((await res.json()) as { schedules?: Schedule[] }).schedules ?? []
-  }
-
-  /** Delete a schedule or timer. Throws a 404 ArgenticError if it does not exist. */
-  async deleteSchedule(agent: string, name: string, opts: { memory?: string } = {}): Promise<void> {
-    await this.send(this.schedulePath(agent, name, opts.memory), undefined, this.plainHeaders(), 'DELETE')
   }
 
   /**
@@ -381,25 +329,8 @@ export class Argentic {
     return ((await res.json()) as { tools?: ToolDecl[] }).tools ?? []
   }
 
-  /** Where Argentic posts a signed `agent.due` notice (https, port 443, a public host), or null to stop the notices and keep polling due(). Returns the stored address. */
-  async setWakeUrl(url: string | null): Promise<string | null> {
-    const res = await this.send('/v1/settings/wake_url', JSON.stringify({ url }), { ...this.plainHeaders(), 'Content-Type': 'application/json' }, 'PUT')
-    return ((await res.json()) as { wake_url: string | null }).wake_url
-  }
-
-  /** The wake URL and the signing secret (`whsec_...`) to give handleDue as `secret`. */
-  async notices(): Promise<NoticeSettings> {
-    const res = await this.send('/v1/settings/notices', undefined, this.plainHeaders(), 'GET')
-    return (await res.json()) as NoticeSettings
-  }
-
   private plainHeaders(): Record<string, string> {
     return { Authorization: `Bearer ${this.apiKey}` }
-  }
-
-  private schedulePath(agent: string, name: string | undefined, memory: string | undefined): string {
-    const base = `/v1/agents/${encodeURIComponent(agent)}/schedules${name === undefined ? '' : `/${encodeURIComponent(name)}`}`
-    return memory === undefined ? base : `${base}?memory=${encodeURIComponent(memory)}`
   }
 
   private async send(path: string, body: string | undefined, headers: Record<string, string>, method = 'POST'): Promise<Response> {
@@ -419,7 +350,7 @@ export class Argentic {
         netError = e
       }
       if (res && res.ok) return res
-      // 409 on a wake means queued behind another call; on a schedule write it means a limit, which is the caller's to read.
+      // 409 on a wake means queued behind another call.
       if (res && res.status === 409 && method === 'POST') {
         const info = (await res.json().catch(() => ({}))) as { retry_after?: number }
         if (++queued > this.maxQueuedWaits) throw new ArgenticError('still queued after waiting', 409, info)
@@ -439,127 +370,6 @@ export class Argentic {
       }
       await this.sleep(this.backoffMs[failures++])
     }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Due notices: verify the signed notice the hosted API posts to your wake_url, then wake the agent.
-
-/** What the notice says. It names the agent and why it is due, never its content. */
-export interface DueNotice {
-  type: 'agent.due'
-  agent: string
-  memory: string | null
-  reasons: string[]
-  /** ISO time the agent became due. */
-  since: string
-}
-
-export type WebhookErrorCode = 'bad_secret' | 'missing_header' | 'bad_timestamp' | 'stale' | 'bad_signature' | 'bad_body'
-
-/** The notice cannot be trusted or read. Nothing was woken. `code` says why. */
-export class WebhookVerificationError extends Error {
-  constructor(message: string, readonly code: WebhookErrorCode) {
-    super(message)
-    this.name = 'WebhookVerificationError'
-  }
-}
-
-/** A Fetch API Request, or the raw body text with its headers. */
-export type DueRequest = Request | { body: string; headers: Record<string, string> | Headers }
-
-export interface VerifyOptions {
-  /** The `whsec_...` secret shown when the wake_url was registered. Defaults to the ARGENTIC_WEBHOOK_SECRET environment variable. */
-  secret?: string
-  /** How far the notice's timestamp may be from now, either way, in seconds. Default 300. */
-  toleranceSeconds?: number
-  /** The current time in milliseconds. For tests. */
-  now?: () => number
-}
-
-export interface DueOptions extends VerifyOptions {
-  /** The client that wakes the agent. Defaults to a new Argentic(), which reads ARGENTIC_API_KEY and MODEL_KEY. */
-  client?: Argentic
-  model?: ModelSpec
-}
-
-/** `v1,<base64 HMAC-SHA256>` over "id.timestamp.body", keyed by the base64-decoded part of the secret after `whsec_`. Standard Webhooks. */
-export function signNotice(secret: string, id: string, timestamp: number | string, body: string): string {
-  return `v1,${createHmac('sha256', secretKey(secret)).update(`${id}.${timestamp}.${body}`).digest('base64')}`
-}
-
-function secretKey(secret: string | undefined): Buffer {
-  const b64 = (secret ?? '').replace(/^whsec_/, '')
-  const key = /^[A-Za-z0-9+/]+={0,2}$/.test(b64) && b64.length % 4 === 0 ? Buffer.from(b64, 'base64') : undefined
-  if (!key?.length) throw new WebhookVerificationError('the webhook secret is missing or not a whsec_ base64 string (set ARGENTIC_WEBHOOK_SECRET)', 'bad_secret')
-  return key
-}
-
-async function readDue(req: DueRequest): Promise<{ body: string; get: (name: string) => string | undefined }> {
-  if (typeof Request !== 'undefined' && req instanceof Request) return { body: await req.text(), get: (n) => req.headers.get(n) ?? undefined }
-  const { body, headers } = req as { body: string; headers: Record<string, string> | Headers }
-  if (headers instanceof Headers) return { body, get: (n) => headers.get(n) ?? undefined }
-  const lower = new Map(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]))
-  return { body, get: (n) => lower.get(n) }
-}
-
-/**
- * Check the signature and the time, then parse the notice. No network. The signature is checked against the body exactly as it arrived,
- * so pass the raw text, not re-serialized JSON. Use it to queue the notice and wake later; the returned `id` is the key to wake with.
- */
-export async function verifyDue(req: DueRequest, opts: VerifyOptions = {}): Promise<{ notice: DueNotice; id: string }> {
-  const key = secretKey(opts.secret ?? process.env.ARGENTIC_WEBHOOK_SECRET)
-  const { body, get } = await readDue(req)
-  const id = get('webhook-id')
-  const stamp = get('webhook-timestamp')
-  const sigs = get('webhook-signature')
-  if (!id || !stamp || !sigs) throw new WebhookVerificationError('missing webhook-id, webhook-timestamp or webhook-signature header', 'missing_header')
-  if (!/^\d{1,12}$/.test(stamp)) throw new WebhookVerificationError('webhook-timestamp is not a number of seconds', 'bad_timestamp')
-  const nowS = (opts.now ?? Date.now)() / 1000
-  if (Math.abs(nowS - Number(stamp)) > (opts.toleranceSeconds ?? 300)) throw new WebhookVerificationError('webhook-timestamp is outside the allowed window', 'stale')
-  const expected = createHmac('sha256', key).update(`${id}.${stamp}.${body}`).digest()
-  let ok = false
-  for (const entry of sigs.split(/\s+/)) {
-    const [version, sig] = entry.split(',')
-    if (version !== 'v1' || !sig) continue
-    const given = Buffer.from(sig, 'base64')
-    if (given.length === expected.length && timingSafeEqual(given, expected)) ok = true
-  }
-  if (!ok) throw new WebhookVerificationError('no webhook-signature matches', 'bad_signature')
-  let notice: DueNotice
-  try {
-    notice = JSON.parse(body)
-  } catch {
-    throw new WebhookVerificationError('the notice body is not JSON', 'bad_body')
-  }
-  if (notice?.type !== 'agent.due' || typeof notice.agent !== 'string' || !notice.agent) throw new WebhookVerificationError('not an agent.due notice', 'bad_body')
-  return { notice, id }
-}
-
-/**
- * Verify a due notice, then wake the agent for what fell due, on your own model key (the notice carries none).
- * The wake's idempotency key comes from the notice's webhook-id, so a notice delivered again replays the first wake's answer.
- * Throws WebhookVerificationError before any call is made if the notice is not valid.
- */
-export async function handleDue(req: DueRequest, opts: DueOptions = {}): Promise<{ notice: DueNotice; wake: WakeResult }> {
-  const { notice, id } = await verifyDue(req, opts)
-  const body: WakeBody = { fire_due: true, model: opts.model ?? freeModel }
-  if (notice.memory != null) body.memory = notice.memory
-  const wake = await (opts.client ?? new Argentic()).wake(notice.agent, body, safeKey(id))
-  return { notice, wake }
-}
-
-/** handleDue as a route handler's answer: 200 woken, 401 not verified, 400 unreadable body, 500 secret not set up, 502 the wake failed (so the notice is sent again). */
-export async function handleDueResponse(req: DueRequest, opts: DueOptions = {}): Promise<Response> {
-  try {
-    const { notice, wake } = await handleDue(req, opts)
-    return Response.json({ agent: notice.agent, wake_id: wake.wake_id, status: wake.status })
-  } catch (e) {
-    if (e instanceof WebhookVerificationError) {
-      const status = e.code === 'bad_body' ? 400 : e.code === 'bad_secret' ? 500 : 401
-      return Response.json({ error: e.code }, { status })
-    }
-    return Response.json({ error: 'wake_failed' }, { status: 502 })
   }
 }
 

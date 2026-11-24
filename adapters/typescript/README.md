@@ -68,34 +68,19 @@ const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: 
 
 `run` answers the tools an agent asked for with a text message the model reads, and now also sends the same results as the `results` field of the wake: `[{ seq, result }]`, where `seq` is the action's `seq` and `result` is exactly what the tool returned (or the `{ error }` object when it threw). The API journals each as the real result of that call. The first wake of a run has none, and a result the ledger already held is sent again like the others. Pass `structuredResults: false` to send the text only. If the API you talk to does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, add `results` to the body next to the `message`, never with `fire_due`, at most 100 entries.
 
-## Waking on a schedule (handleDue)
+## Waking the agent later
 
-Create a recurring schedule or a one-shot timer, and read what is due:
-
-```ts
-const client = new Argentic()
-await client.putSchedule('support-bot', 'morning-check', { cron: '0 9 * * *', message: 'Review overnight tickets.' }) // five UTC fields
-await client.putSchedule('support-bot', 'follow-up', { at: '2026-11-20T09:00:00Z', message: 'Chase the open refund.' }) // one-shot
-await client.schedules('support-bot')   // name, cron or at, next_at, last_fired_at, fires
-await client.due()                      // what is due now; wake each agent with fire_due, or let the notice below do it
-await client.deleteSchedule('support-bot', 'follow-up')
-```
-
-
-Beta, off by default on the hosted API, and open to single beta users only for now. When an agent falls due (a plan's `wake_at`, a schedule, a timer or a hook event), Argentic POSTs a signed notice to the `wake_url` you registered. The notice names the agent and why it is due and carries no agent content and no model key. `handleDue` checks the signature and the time, then wakes the agent with `fire_due` on your own model key.
-
-Register the address and read the secret with the client: `await client.setWakeUrl('https://app.example.com/argentic/due')`, then `(await client.notices()).signing_secret` (`whsec_...`). Store it like a password, for example as `ARGENTIC_WEBHOOK_SECRET`. The model key stays on your server: set `MODEL_KEY` there, as for any other wake.
+Argentic has no clock of its own: your app decides when an agent runs. Send `schedule: true` on the agent's wakes so it can put a time on a plan. Every answer then has `wake_at`, the time the agent next wants waking, or `null`. Keep the latest one per agent in your own scheduler (a cron job, a delayed queue job) and at that time wake the agent with `fire_due`:
 
 ```ts
-import { Hono } from 'hono'
-import { handleDueResponse } from '@argentic-ai/client'
+const out = await client.wake('support-bot', { message: 'Chase the refund on Friday.', model: freeModel, schedule: true }, 'chase-1')
+if (out.wake_at) await queue.add('wake-support-bot', {}, { delay: Date.parse(out.wake_at) - Date.now() })
 
-const app = new Hono()
-// Reads ARGENTIC_API_KEY, MODEL_KEY and ARGENTIC_WEBHOOK_SECRET from the environment.
-app.post('/argentic/due', (c) => handleDueResponse(c.req.raw))
+// later, in that job:
+const next = await client.wake('support-bot', { fire_due: true, model: freeModel, schedule: true })
 ```
 
-`handleDueResponse` answers 200 when the agent was woken, 401 if the signature or time is wrong, 400 if the body is not an `agent.due` notice, 500 if the secret is missing or malformed, and 502 if the wake itself failed (the notice is then sent again). It takes a Fetch `Request` or `{ body, headers }` with the raw body text, and works the same in a Next.js route handler. `handleDue(request, { secret, client, model, toleranceSeconds })` returns `{ notice, wake }` and throws `WebhookVerificationError` (with a `code`) before any call is made. `verifyDue(request)` only verifies and parses, so you can queue the notice and wake later. The wake uses the notice's `webhook-id` as its idempotency key, so a notice delivered twice replays the first wake instead of waking twice. Timestamps more than 300 seconds off are refused.
+A `fire_due` wake with nothing due makes no model call and costs nothing. `client.due()` lists every plan whose time has passed, if your scheduler loses track.
 
 ## What to know
 
