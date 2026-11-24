@@ -39,7 +39,7 @@ Rules:
 
    The TypeScript client needs Node 22 or newer. The Python client needs 3.10 or newer. The Python package may not be on PyPI yet. If `pip install argentic-ai` fails, use `pip install "argentic-ai @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"`.
 4. Install the client. Use the project's own package manager.
-5. Write the smallest working call. Do not invent names: read the client source for the exact ones. It is in this repo under `adapters/typescript/argentic.ts` and `adapters/python/argentic_ai/core.py`. The names as of client 0.1.6:
+5. Write the smallest working call. Do not invent names: read the client source for the exact ones. It is in this repo under `adapters/typescript/argentic.ts` and `adapters/python/argentic_ai/core.py`. The names as of client 0.4.0:
 
    TypeScript:
 
@@ -72,7 +72,7 @@ Rules:
    `freeModel` and `model_from_env()` use a free NVIDIA model. For a first run that shows the engine as it runs in production, use Anthropic `claude-haiku-5-5` with an `sk-ant-` key instead: the engine's prompt-cache breakpoints exist only for the `anthropic` provider, and other providers rely on their own caching. For another model, set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` (dollars per million tokens), as the examples README describes. Prices matter: the spend limit counts with them.
 
    Neither client loads `.env` itself. Run the script with the user's usual way of loading it (`node --env-file=.env`, `python-dotenv`, or the shell).
-6. If the user already has tools, wire them with `run` (TypeScript or Python) and the adapter from the table, as the example does. Keep `agent` and `run_id` the same across restarts.
+6. If the user already has tools, wire them with `run` (TypeScript or Python) and the adapter from the table, as the example does. Call it from wherever the app gets an event (a webhook, a queue, a cron job): `task` is only the new event, `runId` / `run_id` is that event's id, and `tools` are the user's own functions, run in their code with their auth. If the agent should be woken later, pass `schedule: true` / `schedule=True`, keep the result's `wakeAt` / `wake_at` in the app's own scheduler, and wake the agent then with `fireDue: true` / `fire_due=True` in place of `task`. Argentic keeps no clock. An agent that needs a person to say yes just stops: the tool asks the person in the app and returns that it is waiting, and the app's next wake carries the answer.
 7. Run it once. Use a throwaway agent id (`quickstart-check`) and `max_usd` of 0.05. The user must have set both keys first. Do not run it before that.
 8. Report `spent_usd`, `status` and the agent id you used. If it fails, `hint_for` / `hintFor` in the client turns the error into a plain sentence. `model_key_rejected` and `bad_model` mean nothing was spent.
 

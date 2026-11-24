@@ -76,6 +76,8 @@ result = run(Argentic(), agent="support-bot", run_id="ticket-77", task="Close ti
                      tools=from_langchain_tools([close_ticket]), ledger_path=".argentic-ticket-77.json")
 ```
 
+`task` is the new event: what happened since the agent last ran, never the earlier messages. `ledger_path` is optional: leave it out and finished actions are kept in memory for the call, so make your handlers safe to repeat with `ctx.idempotency_key`.
+
 Run it again after a crash and it resumes. `model` defaults to `FREE_MODEL`; `model_from_env()` reads the variables below.
 
 `client.replay(agent, wake_id)` re-renders a wake's prompts from the journal and compares them to what the model was shown. It calls no model and spends nothing. The answer always has `turns`, `matched`, `mismatched` and `unverifiable`, and `summarize_replay(result)` gives one line.
@@ -95,6 +97,17 @@ if out.wake_at:
 
 # later, in that task:
 client.wake("support-bot", model=FREE_MODEL, idempotency_key=f"due-{out.wake_at}", fire_due=True, schedule=True)
+```
+
+`run` does the same for an agent with tools of your own: pass `schedule=True`, and the result's `wake_at` is the time to wake it next, with `fire_due=True` in place of `task`:
+
+```python
+out = run(client, agent="support-bot", run_id=event["id"], task=event["text"], tools=tools, schedule=True)
+if out.wake_at:
+    wake_later.apply_async(eta=datetime.fromisoformat(out.wake_at))
+
+# later, in that task:
+run(client, agent="support-bot", run_id=f"due-{time.time_ns()}", fire_due=True, tools=tools, schedule=True)
 ```
 
 A `fire_due` wake with nothing due makes no model call and costs nothing. `client.due()` lists every plan whose time has passed, if your scheduler loses track.

@@ -11,7 +11,8 @@ export const defaultTimeoutMs = 300_000
 export interface ModelSpec {
   provider: string
   id: string
-  prices: { in: number; out: number }
+  /** Dollars per million tokens. `cache_hit` is what a cached input token costs, if your provider has a cache price. */
+  prices: { in: number; out: number; cache_hit?: number }
 }
 
 /** The free default model. */
@@ -391,10 +392,12 @@ export class Ledger {
   private wakes: Record<string, StoppedWake> = {}
 
   /**
-   * A missing file starts an empty ledger. A file that cannot be read or parsed is set aside as `<path>.corrupt` and `onCorrupt`
-   * is told, because an empty ledger means finished actions may run again. `onCorrupt` defaults to console.warn.
+   * With no `path` the ledger lives in memory only and nothing is written to disk. With one, a missing file starts an empty
+   * ledger, and a file that cannot be read or parsed is set aside as `<path>.corrupt` and `onCorrupt` is told, because an
+   * empty ledger means finished actions may run again. `onCorrupt` defaults to console.warn.
    */
-  constructor(readonly path: string, onCorrupt: (message: string) => void = (m) => console.warn(m)) {
+  constructor(readonly path?: string, onCorrupt: (message: string) => void = (m) => console.warn(m)) {
+    if (path === undefined) return
     let text: string
     try {
       text = readFileSync(path, 'utf8')
@@ -441,6 +444,7 @@ export class Ledger {
 
   /** Write temp file, then rename, so a crash never leaves half a ledger. */
   private save(): void {
+    if (this.path === undefined) return
     mkdirSync(dirname(this.path) || '.', { recursive: true })
     const tmp = `${this.path}.${process.pid}.tmp`
     writeFileSync(tmp, JSON.stringify(Object.keys(this.wakes).length ? { entries: this.entries, wakes: this.wakes } : { entries: this.entries }, null, 2))
@@ -487,11 +491,21 @@ export interface RunOptions {
   client: Argentic
   agent: string
   /** Chosen by you and kept the same across restarts. */
+  /** Chosen by you and kept the same when a run is retried. The id of the event that woke the agent is a good one. */
   runId: string
-  task: string
+  /** The new event: what happened since the agent last ran. Send only that, never the earlier messages. Leave it out when `fireDue` is set. */
+  task?: string
+  /** Wake the agent for the plans whose `wake_at` has come, instead of with a task. Costs nothing when none is due. */
+  fireDue?: boolean
+  /** True when your app will wake the agent at the `wake_at` this run returns, so the agent may put a time on a plan. Send it on every run of that agent. */
+  schedule?: boolean
   system?: string
   tools: Tool[]
-  ledgerPath: string
+  /**
+   * Where finished actions are kept, so a process that was killed and started again does not run them twice. Leave it out and
+   * they are kept in memory for this call only (no file is written); then make your tools safe to repeat, with `ctx.idempotencyKey`.
+   */
+  ledgerPath?: string
   model?: ModelSpec
   maxSteps?: number
   limits?: WakeBody['limits']
@@ -519,6 +533,8 @@ export interface RunResult {
   steps: number
   status: WakeStatus | 'max_steps'
   spentUsd: number
+  /** When the agent next wants waking (an ISO time, already past if a plan is due), or null. Argentic keeps no clock: your scheduler wakes it then, with `run({ fireDue: true })`. Needs `schedule: true`. */
+  wakeAt: string | null
 }
 
 const safeKey = (s: string) => s.replace(/[^A-Za-z0-9\-_.:]/g, '-').slice(0, 128)
@@ -531,6 +547,7 @@ const carriesOn = (s: WakeStatus) => s === 'turn_cap' || s === 'time_cap'
 
 export async function run(opts: RunOptions): Promise<RunResult> {
   const { client, agent, tools } = opts
+  if (opts.fireDue ? opts.task !== undefined : opts.task === undefined) throw new Error('run: pass `task` (the new event) or `fireDue: true`, not both and not neither')
   const log = opts.log ?? ((line: string) => console.log(line))
   const maxSteps = opts.maxSteps ?? 8
   const model = opts.model ?? freeModel
@@ -545,6 +562,7 @@ export async function run(opts: RunOptions): Promise<RunResult> {
   const wakes: string[] = []
   let message = opts.task
   let reply = ''
+  let wakeAt: string | null = null
   let spentUsd = 0
   let status: RunResult['status'] = 'max_steps'
   let steps = 0
@@ -554,7 +572,8 @@ export async function run(opts: RunOptions): Promise<RunResult> {
 
   for (let step = 0; step < maxSteps; step++) {
     const key = safeKey(`${opts.runId}.${step}`)
-    const body: WakeBody = { message, model, tools: decls }
+    const body: WakeBody = step === 0 && opts.fireDue ? { fire_due: true, model, tools: decls } : { message, model, tools: decls }
+    if (opts.schedule) body.schedule = true
     if (structured && step > 0 && pending.length) body.results = pending
     opts.onWakeStart?.({ step })
     if (opts.system) body.system = opts.system
@@ -568,11 +587,12 @@ export async function run(opts: RunOptions): Promise<RunResult> {
       ledger.setWake(key, answer)
     }
     steps = step + 1
-    wakes.push(res.wake_id)
+    if (res.wake_id) wakes.push(res.wake_id) // a `fireDue` wake with nothing due has none
     reply = res.reply ?? ''
     spentUsd += res.spent_usd ?? 0
     status = res.status
-    log(`step ${step}: wake ${res.wake_id} ${res.status}${kept ? ' (stopped answer kept in the ledger)' : res.idempotentReplay ? ' (stored answer replayed)' : ''}`)
+    wakeAt = res.wake_at ?? null
+    log(`step ${step}: wake ${res.wake_id ?? '(nothing due)'} ${res.status}${kept ? ' (stopped answer kept in the ledger)' : res.idempotentReplay ? ' (stored answer replayed)' : ''}`)
     opts.onWake?.({ step, wakeId: res.wake_id, status: res.status, replayed: !!res.idempotentReplay })
 
     const actions = res.actions ?? []
@@ -614,7 +634,7 @@ export async function run(opts: RunOptions): Promise<RunResult> {
     pending = results.map(({ seq, result }) => ({ seq, result }))
   }
 
-  return { reply, wakes, steps, status, spentUsd }
+  return { reply, wakes, steps, status, spentUsd, wakeAt }
 }
 
 /** @deprecated Renamed to `run` in 0.2.0. Same function; this name stays so existing code keeps working. */
