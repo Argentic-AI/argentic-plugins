@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, TypedDict
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 DEFAULT_BASE_URL = "https://api.getargentic.com"
 BACKOFF = (1, 2, 4, 8)  # waits between the 5 tries on 5xx or network errors
@@ -88,6 +88,8 @@ def hint_for(e: BaseException) -> str | None:
         return "Check ARGENTIC_API_KEY. A key only works on the API it was made for, so if you set ARGENTIC_BASE_URL, make the key in that dashboard."
     if code == "model_key_rejected":
         return "Your model provider refused MODEL_KEY. Check it is a key for the provider in the error (a free NVIDIA key starts with nvapi-)."
+    if code == "bad_embed_key":
+        return "The API cannot use EMBED_KEY as sent: EMBED_PROVIDER is cohere (the default) or bedrock, EMBED_REGION goes with bedrock only, and the key has no spaces. Unset EMBED_KEY to recall by words alone."
     if code == "bad_model":
         return "Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves, or unset it for the free default."
     if e.status == 402:
@@ -134,7 +136,9 @@ def model_from_env(env: Mapping[str, str] | None = None) -> ModelSpec:
 class Argentic:
     """A small client for the Argentic API.
 
-    `api_key` defaults to ARGENTIC_API_KEY, `model_key` (sent as X-Model-Key) to MODEL_KEY and `base_url` to
+    `api_key` defaults to ARGENTIC_API_KEY, `model_key` (sent as X-Model-Key) to MODEL_KEY, `embed_key` (sent as X-Embed-Key, so the
+    agent's recall also finds what was said in other words; without one it recalls by words) to EMBED_KEY, `embed_provider` (`cohere`, the
+    default, or `bedrock`) to EMBED_PROVIDER, `embed_region` (for `bedrock`) to EMBED_REGION, and `base_url` to
     ARGENTIC_BASE_URL, then to the production API. `timeout` is how long a socket may stay silent, in seconds.
     `backoff` lists the waits between retries of a 5xx or network failure, and `max_queued_waits` bounds
     the 409 "queued" retries.
@@ -150,9 +154,20 @@ class Argentic:
         log: Callable[[str], None] = print,
         backoff: tuple[float, ...] = BACKOFF,
         max_queued_waits: int = MAX_QUEUED_WAITS,
+        embed_key: str | None = None,
+        embed_provider: str | None = None,
+        embed_region: str | None = None,
     ):
         self.api_key = api_key or os.environ.get("ARGENTIC_API_KEY", "")
         self.model_key = model_key or os.environ.get("MODEL_KEY", "")
+        key = embed_key or os.environ.get("EMBED_KEY", "")
+        provider = embed_provider or os.environ.get("EMBED_PROVIDER", "")
+        region = embed_region or os.environ.get("EMBED_REGION", "")
+        self._embed = (
+            {"X-Embed-Key": key, **({"X-Embed-Provider": provider} if provider else {}), **({"X-Embed-Region": region} if region else {})}
+            if key
+            else {}
+        )
         self.base_url = (base_url or os.environ.get("ARGENTIC_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
         self.timeout = timeout
         self.backoff = tuple(backoff)
@@ -277,6 +292,7 @@ class Argentic:
         headers = {"Idempotency-Key": idempotency_key}
         if self.model_key:
             headers["X-Model-Key"] = self.model_key
+        headers.update(self._embed)
         path = f"/v1/agents/{urllib.parse.quote(agent, safe='')}/wake"
         if results is not None and not self._results_refused:
             try:

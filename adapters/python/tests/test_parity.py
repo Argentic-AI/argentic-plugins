@@ -50,7 +50,7 @@ class ParityTest(unittest.TestCase):
 
     def test_every_hint_the_typescript_client_gives_the_python_client_gives_word_for_word(self):
         hints = re.findall(r"return '((?:[^'\\]|\\.)*)'", self.ts[self.ts.index("export function hintFor"):self.ts.index("export interface ClientOptions")])
-        self.assertEqual(len(hints), 6)
+        self.assertEqual(len(hints), 7)
         py = open(core.__file__).read()
         for hint in hints:
             self.assertIn(hint.replace("\\'", "'"), py)
