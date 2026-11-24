@@ -1,12 +1,12 @@
 # Argentic plugins
 
-[Argentic](https://getargentic.com/docs) is an engine that keeps AI agents right for hours while prompt size is bounded. This repo connects your coding agent to it: wake agents, give them tools, and manage your API keys, usage and budget.
+[Argentic](https://getargentic.com/docs) is an engine that keeps AI agents right for hours while prompt size is bounded. This repo has the skills and the optional connector that let your coding assistant integrate Argentic into your app, then manage your API keys, usage and budget.
 
 If your agent runs out of context and gets worse after many tokens, that is the problem the engine is for. [How it compares with Lossless Claw, Hindsight, Mem0 and Letta](https://getargentic.com/blog/my-agent-gets-worse-over-long-runs/), read from each one's own docs.
 
 This repo holds only manifests, skills, MCP settings and small client adapters. The engine is not in it.
 
-There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
+Start with the [prompt below](#ask-your-agent-to-do-it): your assistant integrates your app first. The connector comes after, as an optional dev tool. There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
 
 ## Try it
 
@@ -15,6 +15,10 @@ To run your own agent, start with the [TypeScript client](adapters/typescript/RE
 To test Argentic against a plain loop on a scripted scenario, use [`@argentic-ai/check`](check/README.md). It runs scripted scenarios (a shop shift, a coordinator day and longshift ship with it; you can add your own) on your own keys, scores both arms with code, and stops at a spend cap you set. It needs an Argentic key and a model key.
 
 `npx @argentic-ai/client demo` was removed in client 0.2.0. The kill-and-resume refund story still lives in [`examples/`](examples/).
+
+## Optional: the connector
+
+Once your app is integrated, add the connector so your assistant can manage keys, usage and runs.
 
 ## Claude Code
 
@@ -79,14 +83,22 @@ Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph,
 
 ## Ask your agent to do it
 
+Paste this into Claude Code, Codex or another coding assistant, in your app's folder. It integrates Argentic into your app first, then offers the connector.
+
 ```
-Set up Argentic for me. Read https://getargentic.com/docs/agents and follow it for the tool I'm using right now. Don't ask me to paste keys into this chat: tell me where each key goes and let me put it there. When it's connected, call get_account and tell me what it returned.
+Add Argentic to this app. Read https://getargentic.com/docs/quickstart and follow it for my stack.
+
+Argentic runs the agent loop and keeps the history, so each call sends only the new events (a user message, a tool result), never the whole transcript. Use my Anthropic key as the model key if I have one, since prompt caching is built for Anthropic models.
+
+Put ARGENTIC_API_KEY and my model key in .env. Don't ask me to paste keys into this chat: tell me where each one goes and let me add it. Run one small test call with a spend cap and tell me what it cost.
+
+When that works, ask whether I also want the Argentic connector installed in this assistant. It's optional: it lets you manage my keys, usage and runs from here. If I say yes, follow https://getargentic.com/docs/agents#assistant. Don't install it unless I say yes.
 ```
 
 ## What is in the plugin
 
 - `argentic` skill: how to build on the API without wasting money or claiming features that do not exist.
-- `argentic-setup` skill: connect, and make a first call for a few cents at most.
+- `argentic-setup` skill: integrates your app first, then offers the connector.
 - `argentic-quickstart` skill: add Argentic to your own project, with keys in `.env`, and run one small test call.
 - `argentic-status` skill: list your agents and which runs got cut off. Read only.
 - `argentic-fix` skill: find why a run stopped, then resume it or ask you to approve.
