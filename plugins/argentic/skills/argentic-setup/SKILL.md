@@ -1,9 +1,26 @@
 ---
 name: argentic-setup
-description: Use when the user wants to connect to Argentic, the argentic MCP server is missing, failing or returning unauthorized or model_key_required, or they want to make a first safe test call.
+description: Use when the user asks to set up Argentic or add it to their app. Integrates their app first, then offers the optional connector. Also for a missing or failing argentic MCP server, unauthorized, model_key_required, or a first safe test call.
 ---
 
-# Connecting to Argentic
+# Setting up Argentic
+
+Order matters. Argentic is for the user's own app, so integrate the app first. The connector (the MCP below) is an optional dev tool for keys, usage and runs. Never install it as step one.
+
+## Step 1: integrate the user's app
+
+Use the `argentic-quickstart` skill. In short:
+
+1. Detect their stack and install the client.
+2. Send Argentic only the new events (a user message, a tool result). Argentic keeps the history and builds each prompt from it, so never resend the transcript.
+3. Put `ARGENTIC_API_KEY` and the model key in `.env`, never in chat or in code. Tell the user where each goes and let them add it. Prefer an Anthropic model key: prompt caching is built for Anthropic models.
+4. Run one small test call with `max_usd` of 0.05 and report `spent_usd`.
+
+## Step 2: offer the connector
+
+Only after the test call works, ask: "Want the Argentic connector in this assistant too? It lets me manage your keys, usage and runs from here." Install it only on a yes. Everything below is that connector.
+
+# The connector
 
 ## What you need
 
