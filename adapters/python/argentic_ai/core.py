@@ -8,10 +8,6 @@ from __future__ import annotations
 
 import warnings
 import asyncio
-import base64
-import binascii
-import hashlib
-import hmac
 import http.client
 import inspect
 import json
@@ -28,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Callable, Mapping, TypedDict
 
-__version__ = "0.1.8"
+__version__ = "0.2.0"
 
 DEFAULT_BASE_URL = "https://api.getargentic.com"
 BACKOFF = (1, 2, 4, 8)  # waits between the 5 tries on 5xx or network errors
@@ -117,6 +113,7 @@ class WakeResponse:
     raw: dict[str, Any] = field(default_factory=dict)
     resumed: bool | None = None  # True when the wake picked up a message the API had already recorded
     error: str | None = None  # why the model call failed, when status is "error"
+    wake_at: str | None = None  # when the agent next wants waking (ISO 8601), or None; wake it then with fire_due=True
 
 
 def model_from_env(env: Mapping[str, str] | None = None) -> ModelSpec:
@@ -241,15 +238,17 @@ class Argentic:
         tools: list[dict[str, Any]] | None = None,
         limits: Mapping[str, Any] | None = None,
         fire_due: bool = False,
+        schedule: bool = False,
         memory: str | None = None,
         context: str | None = None,
         tool_choice: str | Mapping[str, Any] | None = None,
         results: list[Mapping[str, Any]] | None = None,
     ) -> WakeResponse:
-        """Wake an agent with a message, or with `fire_due=True` and no message for the plans, schedules and timers that
-        have fallen due (the API refuses both together). `memory` picks one of the agent's memories. Safe to call again
-        with the same key: a queued (409) answer waits and resends, a 5xx or network error retries with backoff, and a
-        reused key with a different body raises.
+        """Wake an agent with a message, or with `fire_due=True` and no message for the plans that have fallen due (the
+        API refuses both together). Every answer carries `wake_at` (`WakeResponse.wake_at`): when the agent next wants
+        waking, or None. Argentic keeps no clock; your scheduler wakes the agent then with `fire_due=True`. `memory`
+        picks one of the agent's memories. `schedule=True` lets the agent put a time on a plan. Safe to call again with the same key: a queued (409) answer waits and resends,
+        a 5xx or network error retries with backoff, and a reused key with a different body raises.
 
         `results` is what your app's tools returned for the `actions` of the previous wake, as `{"seq": n, "result": ...}`
         entries (`seq` is the action's `seq`, `result` exactly what the tool returned). The API journals each as the real
@@ -261,6 +260,8 @@ class Argentic:
             body["message"] = message
         if fire_due:
             body["fire_due"] = True
+        if schedule:
+            body["schedule"] = True  # the agent may put a time on a plan; the answer's wake_at says when
         if memory is not None:
             body["memory"] = memory
         if system:
@@ -299,43 +300,16 @@ class Argentic:
             raw=data,
             resumed=data.get("resumed"),
             error=data.get("error"),
+            wake_at=data.get("wake_at"),
         )
 
     def due(self, limit: int | None = None) -> list[dict[str, Any]]:
-        """What is due now: plans past their wake_at, schedules and timers whose time has come, and agents waiting on an
-        answered approval or a hook. Read only; costs nothing."""
+        """Plans past their wake_at, across this organization's agents: `{agent, memory, plan_id, text, wake_at}` each.
+        Read only; costs nothing. For catching up after your scheduler was down; the normal path is the `wake_at` each
+        wake answers."""
         q = "" if limit is None else f"?limit={int(limit)}"
         _, data = self._send("due", f"/v1/due{q}", None, {}, "GET")
         return data.get("due") or []
-
-    def _schedule_path(self, agent: str, name: str | None, memory: str | None) -> str:
-        base = f"/v1/agents/{urllib.parse.quote(agent, safe='')}/schedules"
-        if name is not None:
-            base += f"/{urllib.parse.quote(name, safe='')}"
-        return base if memory is None else f"{base}?memory={urllib.parse.quote(memory, safe='')}"
-
-    def put_schedule(
-        self,
-        agent: str,
-        name: str,
-        *,
-        message: str,
-        cron: str | None = None,
-        at: str | None = None,
-        enabled: bool | None = None,
-        memory: str | None = None,
-    ) -> dict[str, Any]:
-        """Create or replace a recurring schedule (`cron`: five UTC fields) or a one-shot timer (`at`: ISO 8601 with an
-        offset). Send exactly one of them. The hosted API must have schedules switched on."""
-        body: dict[str, Any] = {"message": message}
-        if cron is not None:
-            body["cron"] = cron
-        if at is not None:
-            body["at"] = at
-        if enabled is not None:
-            body["enabled"] = enabled
-        _, data = self._send("put_schedule", self._schedule_path(agent, name, memory), body, {}, "PUT")
-        return data.get("schedule") or {}
 
     def put_tools(self, agent: str, tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Declare an agent's tools once (at most 32). A wake that sends no `tools` uses them; one that does uses those
@@ -347,26 +321,6 @@ class Argentic:
         """The tools stored for an agent with put_tools(), or an empty list."""
         _, data = self._send("get_tools", f"/v1/agents/{urllib.parse.quote(agent, safe='')}/tools", None, {}, "GET")
         return data.get("tools") or []
-
-    def schedules(self, agent: str, memory: str | None = None) -> list[dict[str, Any]]:
-        """The schedules and timers of one agent."""
-        _, data = self._send("schedules", self._schedule_path(agent, None, memory), None, {}, "GET")
-        return data.get("schedules") or []
-
-    def delete_schedule(self, agent: str, name: str, memory: str | None = None) -> None:
-        """Delete a schedule or timer. Raises ArgenticError (404) if it does not exist."""
-        self._send("delete_schedule", self._schedule_path(agent, name, memory), None, {}, "DELETE")
-
-    def set_wake_url(self, url: str | None) -> str | None:
-        """Where Argentic posts a signed `agent.due` notice (https, port 443, a public host), or None to stop the
-        notices and keep polling due(). Returns the stored address."""
-        _, data = self._send("set_wake_url", "/v1/settings/wake_url", {"url": url}, {}, "PUT")
-        return data.get("wake_url")
-
-    def notices(self) -> dict[str, Any]:
-        """`wake_url` and `signing_secret` (`whsec_...`, the `secret` for handle_due / verify_due)."""
-        _, data = self._send("notices", "/v1/settings/notices", None, {}, "GET")
-        return data
 
     def replay(self, agent: str, wake: str) -> dict[str, Any]:
         """Re-render a wake's prompts from the journal and compare them to what the model was shown. Spends nothing.
@@ -397,116 +351,6 @@ def summarize_replay(result: dict[str, Any]) -> str:
     if unchecked:
         return f"{len(turns)} turns, {len(turns) - unchecked} match, {unchecked} could not be checked"
     return f"{len(turns)} turn{'' if len(turns) == 1 else 's'}, all match"
-
-
-# ---- due notices ----------------------------------------------------------
-
-class WebhookVerificationError(Exception):
-    """The notice cannot be trusted or read. Nothing was woken. `code` is one of bad_secret, missing_header,
-    bad_timestamp, stale, bad_signature or bad_body."""
-
-    def __init__(self, message: str, code: str):
-        super().__init__(message)
-        self.code = code
-
-
-@dataclass
-class DueNotice:
-    """What a due notice says. It names the agent and why it is due, never its content."""
-
-    agent: str
-    memory: str | None
-    reasons: list[str]
-    since: str  # ISO time the agent became due
-    type: str = "agent.due"
-
-
-def _secret_key(secret: str | None) -> bytes:
-    b64 = re.sub(r"^whsec_", "", secret or "")
-    try:
-        if not re.fullmatch(r"[A-Za-z0-9+/]+={0,2}", b64) or len(b64) % 4:
-            raise ValueError(b64)
-        return base64.b64decode(b64, validate=True)
-    except (ValueError, binascii.Error):
-        raise WebhookVerificationError(
-            "the webhook secret is missing or not a whsec_ base64 string (set ARGENTIC_WEBHOOK_SECRET)", "bad_secret"
-        ) from None
-
-
-def sign_notice(secret: str, webhook_id: str, timestamp: int | str, body: bytes | str) -> str:
-    """`v1,<base64 HMAC-SHA256>` over "id.timestamp.body", keyed by the base64-decoded part of the secret after `whsec_`. Standard Webhooks."""
-    raw = body if isinstance(body, bytes) else body.encode()
-    mac = hmac.new(_secret_key(secret), f"{webhook_id}.{timestamp}.".encode() + raw, hashlib.sha256)
-    return "v1," + base64.b64encode(mac.digest()).decode()
-
-
-def verify_due(
-    body: bytes | str,
-    headers: Mapping[str, str],
-    *,
-    secret: str | None = None,
-    tolerance_seconds: float = 300,
-    now: Callable[[], float] = time.time,
-) -> tuple[DueNotice, str]:
-    """Check the signature and the time, then parse the notice. No network. Returns (notice, webhook_id).
-
-    The signature is checked against the body exactly as it arrived, so pass the raw bytes, not re-serialized JSON.
-    `secret` defaults to ARGENTIC_WEBHOOK_SECRET. `tolerance_seconds` is how far the timestamp may be from `now()`, either way.
-    Use it to queue the notice and wake later; the webhook id is the key to wake with."""
-    key = _secret_key(secret if secret is not None else os.environ.get("ARGENTIC_WEBHOOK_SECRET"))
-    raw = body if isinstance(body, bytes) else body.encode()
-    lower = {k.lower(): v for k, v in headers.items()}
-    wid, stamp, sigs = lower.get("webhook-id"), lower.get("webhook-timestamp"), lower.get("webhook-signature")
-    if not wid or not stamp or not sigs:
-        raise WebhookVerificationError("missing webhook-id, webhook-timestamp or webhook-signature header", "missing_header")
-    if not re.fullmatch(r"[0-9]{1,12}", stamp):
-        raise WebhookVerificationError("webhook-timestamp is not a number of seconds", "bad_timestamp")
-    if abs(now() - int(stamp)) > tolerance_seconds:
-        raise WebhookVerificationError("webhook-timestamp is outside the allowed window", "stale")
-    expected = hmac.new(key, f"{wid}.{stamp}.".encode() + raw, hashlib.sha256).digest()
-    ok = False
-    for entry in sigs.split():
-        version, _, sig = entry.partition(",")
-        if version != "v1" or not sig:
-            continue
-        try:
-            given = base64.b64decode(sig, validate=True)
-        except (ValueError, binascii.Error):
-            continue
-        if hmac.compare_digest(given, expected):
-            ok = True
-    if not ok:
-        raise WebhookVerificationError("no webhook-signature matches", "bad_signature")
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        raise WebhookVerificationError("the notice body is not JSON", "bad_body") from None
-    if not isinstance(data, dict) or data.get("type") != "agent.due" or not isinstance(data.get("agent"), str) or not data["agent"]:
-        raise WebhookVerificationError("not an agent.due notice", "bad_body")
-    return DueNotice(agent=data["agent"], memory=data.get("memory"), reasons=list(data.get("reasons") or []),
-                     since=data.get("since") or ""), wid
-
-
-def handle_due(
-    body: bytes | str,
-    headers: Mapping[str, str],
-    *,
-    client: Argentic | None = None,
-    model: Mapping[str, Any] | None = None,
-    secret: str | None = None,
-    tolerance_seconds: float = 300,
-    now: Callable[[], float] = time.time,
-) -> tuple[DueNotice, WakeResponse]:
-    """Verify a due notice, then wake the agent for what fell due, on your own model key (the notice carries none).
-
-    `client` defaults to Argentic(), which reads ARGENTIC_API_KEY and MODEL_KEY; `model` to FREE_MODEL. The wake's idempotency
-    key comes from the notice's webhook-id, so a notice delivered again replays the first wake's answer. Raises
-    WebhookVerificationError before any call is made if the notice is not valid. Returns (notice, wake)."""
-    notice, wid = verify_due(body, headers, secret=secret, tolerance_seconds=tolerance_seconds, now=now)
-    wake = (client or Argentic()).wake(
-        notice.agent, model=model or FREE_MODEL, idempotency_key=_key_part(wid)[:128], fire_due=True, memory=notice.memory,
-    )
-    return notice, wake
 
 
 # ---- the run loop ---------------------------------------------------------
