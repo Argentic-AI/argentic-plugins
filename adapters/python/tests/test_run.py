@@ -12,8 +12,10 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_ai import FREE_MODEL, Argentic, Ledger, Tool, model_from_env, run  # noqa: E402
+from argentic_ai import Argentic, Ledger, Tool, model_from_env, run  # noqa: E402
 from fake_server import REFUND_SCRIPT, refund_handler, serve  # noqa: E402
+
+MODEL = {"provider": "p", "id": "m", "prices": {"in": 0.0, "out": 0.0}}
 
 SCHEMA = {"type": "object", "properties": {}}
 
@@ -59,6 +61,7 @@ class RunTest(unittest.TestCase):
 
     def run_it(self, **kw):
         kw.setdefault("ledger_path", self.ledger_path())
+        kw.setdefault("model", MODEL)
         return run(self.client, agent="a1", run_id="r", task="go", tools=kw.pop("tools", None) or self.tools(),
                            log=lambda s: None, **kw)
 
@@ -79,9 +82,13 @@ class RunTest(unittest.TestCase):
         self.assertEqual([e for e in events if e[0] == "action" and e[3]], [("action", 2, "send_email", True), ("action", 3, "close_ticket", True)])
         self.assertEqual([r[0] for r in self.ran], ["refund_order", "send_email", "close_ticket"])  # the refund once
 
-    def test_the_free_model_is_the_default(self):
-        self.run_it()
-        self.assertEqual(self.server.requests[0][2]["model"], FREE_MODEL)
+    def test_the_model_you_pass_is_the_one_sent(self):
+        self.run_it(model={"base_url": "https://llm.example.com/v1", "id": "m", "prices": {"in": 1, "out": 2}})
+        self.assertEqual(self.server.requests[0][2]["model"], {"base_url": "https://llm.example.com/v1", "id": "m", "prices": {"in": 1, "out": 2}})
+
+    def test_there_is_no_default_model(self):
+        with self.assertRaises(TypeError):
+            run(self.client, agent="a1", run_id="r", task="go", tools=self.tools(), log=lambda s: None)
 
     def test_no_wake_means_max_steps(self):
         out = self.run_it(max_steps=0)
@@ -100,7 +107,7 @@ class RunTest(unittest.TestCase):
         self.addCleanup(server.server_close)
         self.addCleanup(server.shutdown)
         client = Argentic(api_key="k", base_url=server.url, sleep=lambda s: None, log=lambda s: None)
-        run(client, agent="a2", run_id="r", task="go", ledger_path=self.ledger_path("x.json"), log=lambda s: None,
+        run(client, agent="a2", run_id="r", task="go", ledger_path=self.ledger_path("x.json"), log=lambda s: None, model=MODEL,
                     tools=[Tool("refund_order", "", SCHEMA, boom)])
         self.assertEqual(server.requests[-1][2]["results"], [{"seq": 2, "result": {"error": "card declined"}}])
         self.assertEqual(server.requests[1][2]["results"][0]["result"], {"error": "unknown tool"})
@@ -213,19 +220,21 @@ class CorruptLedgerTest(unittest.TestCase):
 
 
 class ModelFromEnvTest(unittest.TestCase):
-    def test_unset_is_the_free_model_whatever_else_is_set(self):
-        self.assertEqual(model_from_env({}), FREE_MODEL)
-        self.assertEqual(model_from_env({"ARGENTIC_MODEL_PROVIDER": "openai", "ARGENTIC_PRICE_IN": "9"}), FREE_MODEL)
+    def test_no_model_id_is_an_error_not_a_default(self):
+        with self.assertRaises(ValueError):
+            model_from_env({})
+        with self.assertRaises(ValueError):
+            model_from_env({"ARGENTIC_MODEL_PROVIDER": "openai", "ARGENTIC_PRICE_IN": "9"})
 
-    def test_a_chosen_model_takes_its_provider_and_prices(self):
+    def test_a_provider_or_a_base_url_and_never_neither_or_both(self):
         env = {"ARGENTIC_MODEL_ID": "gpt-x", "ARGENTIC_MODEL_PROVIDER": "openai", "ARGENTIC_PRICE_IN": "0.25", "ARGENTIC_PRICE_OUT": "2"}
         self.assertEqual(model_from_env(env), {"provider": "openai", "id": "gpt-x", "prices": {"in": 0.25, "out": 2.0}})
-        self.assertEqual(model_from_env({"ARGENTIC_MODEL_ID": "m"}), {"provider": "nvidia", "id": "m", "prices": {"in": 0.0, "out": 0.0}})
-
-    def test_the_free_model_is_a_copy(self):
-        m = model_from_env({})
-        m["prices"]["in"] = 5
-        self.assertEqual(FREE_MODEL["prices"]["in"], 0)
+        url = {"ARGENTIC_MODEL_ID": "m", "ARGENTIC_MODEL_BASE_URL": "https://llm.example.com/v1"}
+        self.assertEqual(model_from_env(url), {"base_url": "https://llm.example.com/v1", "id": "m", "prices": {"in": 0.0, "out": 0.0}})
+        with self.assertRaises(ValueError):
+            model_from_env({"ARGENTIC_MODEL_ID": "m"})
+        with self.assertRaises(ValueError):
+            model_from_env({**url, "ARGENTIC_MODEL_PROVIDER": "openai"})
 
 
 class DeprecatedNameTest(unittest.TestCase):

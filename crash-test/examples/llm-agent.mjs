@@ -2,15 +2,16 @@
 // `--upstream model=<base url>` (CRASHTEST_UPSTREAM_MODEL_URL), so crash-test can kill it between a model reply and the tool call.
 // Its tools post to the HTTP sink. LLM_KEYED=1 makes it careful: a stable key per action (tool plus the thing it acts on) and a
 // progress file, so a restarted run does not send what already went out.
-//   MODEL_KEY  your model provider's key      AGENT_MODEL_ID  the model id (default: a free NVIDIA model)
+//   MODEL_KEY  your model provider's key      AGENT_MODEL_ID  the model id  AGENT_MODEL_URL  its OpenAI-compatible base URL
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const sink = process.env.CRASHTEST_SINK_URL
 const stateDir = process.env.CRASHTEST_STATE_DIR
-const base = (process.env.CRASHTEST_UPSTREAM_MODEL_URL ?? process.env.AGENT_MODEL_URL ?? 'https://integrate.api.nvidia.com/v1').replace(/\/+$/, '')
-const model = process.env.AGENT_MODEL_ID ?? 'nvidia/nemotron-3.5-super-vl-120b-a12b'
+const base = (process.env.CRASHTEST_UPSTREAM_MODEL_URL ?? process.env.AGENT_MODEL_URL)?.replace(/\/+$/, '')
+const model = process.env.AGENT_MODEL_ID
 if (!sink || !stateDir) throw new Error('Run me under crash-test.')
+if (!base || !model) throw new Error('Set AGENT_MODEL_ID and AGENT_MODEL_URL: there is no default model.')
 const keyed = Boolean(process.env.LLM_KEYED)
 const progress = join(stateDir, 'llm-progress.json')
 const done = existsSync(progress) ? JSON.parse(readFileSync(progress, 'utf8')) : {}

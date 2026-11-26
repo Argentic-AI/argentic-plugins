@@ -12,7 +12,7 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from argentic_ai import DEFAULT_BASE_URL, FREE_MODEL, Argentic, ArgenticError, hint_for  # noqa: E402
+from argentic_ai import DEFAULT_BASE_URL, Argentic, ArgenticError, hint_for  # noqa: E402
 from fake_server import serve  # noqa: E402
 
 MODEL = {"provider": "nvidia", "id": "x", "prices": {"in": 0, "out": 0}}
@@ -100,10 +100,6 @@ class ClientTest(unittest.TestCase):
         c.wake("my agent/../x", "m", model=MODEL, idempotency_key="k")
         c.replay("my agent/../x", "wk_1")
         self.assertEqual([r[0] for r in server.requests], ["/v1/agents/my%20agent%2F..%2Fx/wake", "/v1/agents/my%20agent%2F..%2Fx/replay"])
-
-    def test_the_free_model_is_the_nvidia_one(self):
-        self.assertEqual((FREE_MODEL["provider"], FREE_MODEL["id"], FREE_MODEL["prices"]),
-                         ("nvidia", "nvidia/nemotron-3.5-super-vl-120b-a12b", {"in": 0, "out": 0}))
 
     # ---- answers ----
 

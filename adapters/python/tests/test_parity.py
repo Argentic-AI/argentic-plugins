@@ -44,10 +44,6 @@ class ParityTest(unittest.TestCase):
     def test_the_default_url(self):
         self.assertIn(f"defaultBaseUrl = '{core.DEFAULT_BASE_URL}'", self.ts)
 
-    def test_the_free_model(self):
-        self.assertIn(f"provider: '{core.FREE_MODEL['provider']}'", self.ts)
-        self.assertIn(f"id: '{core.FREE_MODEL['id']}'", self.ts)
-
     def test_every_hint_the_typescript_client_gives_the_python_client_gives_word_for_word(self):
         hints = re.findall(r"return '((?:[^'\\]|\\.)*)'", self.ts[self.ts.index("export function hintFor"):self.ts.index("export interface ClientOptions")])
         self.assertEqual(len(hints), 7)

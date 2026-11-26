@@ -17,7 +17,7 @@ Want something to copy into your own project? [templates/node-agent](../template
 
 Just want to run Argentic against a scripted scenario with nothing to write? See `npx @argentic-ai/check` in the [repo README](../README.md#try-it). The Python package still has `python -m argentic_ai demo` once installed. No framework? Start with [core](core/). The core files in [`../adapters`](../adapters/) work on their own: `run` (TypeScript) and `run` (Python) take plain tools with a JSON schema and a handler.
 
-You need an Argentic API key from https://getargentic.com/platform and a model key. The default model is a free NVIDIA NIM model (get a key at https://build.nvidia.com); set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` to use another.
+You need an Argentic API key from https://getargentic.com/platform and a model key. You name the model yourself; no model is chosen for you. Set `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`, and either `ARGENTIC_MODEL_PROVIDER` (a named endpoint) or `ARGENTIC_MODEL_BASE_URL` (any public https OpenAI-compatible endpoint).
 
 ## Settings
 
@@ -28,8 +28,8 @@ Each example reads these from the environment:
 | `ARGENTIC_API_KEY` | yes | Your Argentic API key (`aek_...`). The docs call the same key `AEK_KEY`. |
 | `MODEL_KEY` | yes | Your model provider's key, sent as `X-Model-Key`. Argentic never stores it. |
 | `ARGENTIC_CRASH_AFTER` | no | Kill the process after this many actions, to try a crash. |
-| `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | no | Use a model other than the free NVIDIA default. Prices are dollars per million tokens. |
+| `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | yes | Your model. Give a provider name or a base URL, not both. Prices are dollars per million tokens. |
 | `ARGENTIC_BASE_URL` | no | The API address. Leave it unset to use the production API. |
 | `ARGENTIC_DASHBOARD_URL` | no | Where the final "open the run timeline" line points. |
 
-If a run stops with `provider_rate_limited`, the free NVIDIA tier is busy. Wait half a minute and run the same command again: it picks up where it stopped.
+If a run stops with `provider_rate_limited`, your provider is rate limiting you. Wait half a minute and run the same command again: it picks up where it stopped.

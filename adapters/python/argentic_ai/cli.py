@@ -33,8 +33,10 @@ USAGE = """Usage: argentic-ai demo [--fresh] [--kill-after N]
   --fresh         start a new run (forget the one in ./.argentic-demo/)
   --kill-after N  kill the process yourself after N actions, instead of pressing Ctrl-C
 
-Needs ARGENTIC_API_KEY (from https://getargentic.com/platform) and MODEL_KEY
-(your model provider's key; the default model is a free NVIDIA one, key from https://build.nvidia.com)."""
+Needs ARGENTIC_API_KEY (from https://getargentic.com/platform), MODEL_KEY (your model
+provider's key) and your model: ARGENTIC_MODEL_ID plus ARGENTIC_MODEL_PROVIDER (a named
+endpoint) or ARGENTIC_MODEL_BASE_URL (any public https OpenAI-compatible endpoint), and
+ARGENTIC_PRICE_IN / ARGENTIC_PRICE_OUT in dollars per million tokens."""
 
 TOOL_NAMES = ("refund_order", "send_email", "close_ticket")
 
@@ -104,6 +106,11 @@ def demo(argv: list[str], client: Argentic | None = None, env: dict[str, str] | 
     api_key, model_key = e.get("ARGENTIC_API_KEY"), e.get("MODEL_KEY")
     if client is None and not (api_key and model_key):
         print(f"Set ARGENTIC_API_KEY and MODEL_KEY first.\n\n{USAGE}", file=sys.stderr)
+        return 1
+    try:
+        model = model_from_env(e)
+    except ValueError as err:
+        print(f"{err}\n\n{USAGE}", file=sys.stderr)
         return 1
     color = sys.stdout.isatty() and not e.get("NO_COLOR")
     dim, bold, green, yellow = (_paint(c, color) for c in ("2", "1", "32", "33"))
@@ -180,7 +187,7 @@ def demo(argv: list[str], client: Argentic | None = None, env: dict[str, str] | 
     res = run(
         client, agent=agent, run_id=run_id, task=TASK, system=SYSTEM,
         tools=make_tools(outbox, float(e.get("ARGENTIC_DEMO_WORK_MS", 1500)), out, {"dim": dim, "bold": bold, "green": green, "yellow": yellow}),
-        ledger_path=ledger_path, model=model_from_env(e), max_steps=10,
+        ledger_path=ledger_path, model=model, max_steps=10,
         crash_after_actions=kill_after, log=lambda s: None,
         on_wake_start=on_wake_start, on_wake=on_wake, on_action=on_action,
     )

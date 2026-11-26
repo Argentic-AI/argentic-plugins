@@ -25,13 +25,16 @@ Straight from GitHub, if you want the latest code or a pinned tag (swap `main` f
 pip install "argentic-ai @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"
 ```
 
-You need an Argentic API key from https://getargentic.com/platform and a model key. The default model is a free NVIDIA one; a key is at https://build.nvidia.com. Argentic is free in beta.
+You need an Argentic API key from https://getargentic.com/platform and a model key. You choose the model: any provider you have a key for.
 
 ## Try it
 
 ```
 export ARGENTIC_API_KEY=aek_...
-export MODEL_KEY=nvapi-...
+export MODEL_KEY=...                       # your provider's key
+export ARGENTIC_MODEL_PROVIDER=openai       # or ARGENTIC_MODEL_BASE_URL=https://... (any OpenAI-compatible endpoint)
+export ARGENTIC_MODEL_ID=...
+export ARGENTIC_PRICE_IN=0.25 ARGENTIC_PRICE_OUT=2  # dollars per million tokens
 python -m argentic_ai demo
 ```
 
@@ -78,7 +81,7 @@ result = run(Argentic(), agent="support-bot", run_id="ticket-77", task="Close ti
 
 `task` is the new event: what happened since the agent last ran, never the earlier messages. `ledger_path` is optional: leave it out and finished actions are kept in memory for the call, so make your handlers safe to repeat with `ctx.idempotency_key`.
 
-Run it again after a crash and it resumes. `model` defaults to `FREE_MODEL`; `model_from_env()` reads the variables below.
+Run it again after a crash and it resumes. `model` is required and there is no default: `{"provider": "openai", "id": "...", "prices": {...}}`, or `"base_url"` in place of `provider` for any public https OpenAI-compatible endpoint. `model_from_env()` reads the variables below.
 
 `client.replay(agent, wake_id)` re-renders a wake's prompts from the journal and compares them to what the model was shown. It calls no model and spends nothing. The answer always has `turns`, `matched`, `mismatched` and `unverifiable`, and `summarize_replay(result)` gives one line.
 
@@ -91,12 +94,13 @@ Each follow-up wake also sends the tool results as the `results` field, `[{"seq"
 Argentic has no clock of its own: your app decides when an agent runs. Pass `schedule=True` on the agent's wakes so it can put a time on a plan. Every answer then has `wake_at`, the time the agent next wants waking, or `None`. Keep the latest one per agent in your own scheduler (cron, Celery's `eta`, a delayed queue job) and at that time wake the agent with `fire_due=True`:
 
 ```python
-out = client.wake("support-bot", "Chase the refund on Friday.", model=FREE_MODEL, idempotency_key="chase-1", schedule=True)
+MY_MODEL = model_from_env()  # or a dict: {"provider": "openai", "id": "...", "prices": {"in": 0.25, "out": 2}}
+out = client.wake("support-bot", "Chase the refund on Friday.", model=MY_MODEL, idempotency_key="chase-1", schedule=True)
 if out.wake_at:
     wake_later.apply_async(eta=datetime.fromisoformat(out.wake_at))
 
 # later, in that task:
-client.wake("support-bot", model=FREE_MODEL, idempotency_key=f"due-{out.wake_at}", fire_due=True, schedule=True)
+client.wake("support-bot", model=MY_MODEL, idempotency_key=f"due-{out.wake_at}", fire_due=True, schedule=True)
 ```
 
 `run` does the same for an agent with tools of your own: pass `schedule=True`, and the result's `wake_at` is the time to wake it next, with `fire_due=True` in place of `task`:
@@ -121,7 +125,7 @@ A `fire_due` wake with nothing due makes no model call and costs nothing. `clien
 | `EMBED_KEY` | Your embedding provider's key, sent as `X-Embed-Key`. With it, the agent's recall also finds what was said in other words; without it, recall goes by words. Argentic never stores it, and your provider bills you for the embedding calls. |
 | `EMBED_PROVIDER`, `EMBED_REGION` | `cohere` (the default) or `bedrock`, and for `bedrock` the region your key calls (default `us-east-1`). |
 | `ARGENTIC_BASE_URL` | The API address. Unset, it is `https://api.getargentic.com`. |
-| `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | A model other than the free default, read by `model_from_env()`. Prices are dollars per million tokens. With no `ARGENTIC_MODEL_ID` you get `FREE_MODEL`. |
+| `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | Your model, read by `model_from_env()`. Give a provider name or a base URL (a public https OpenAI-compatible endpoint), not both. `ARGENTIC_BASE_URL` above is Argentic's API, not the model's. Prices are dollars per million tokens. With no `ARGENTIC_MODEL_ID` it raises `ValueError`: there is no default model. |
 
 `Argentic(api_key=..., model_key=..., embed_key=..., base_url=..., timeout=300)` takes the same things as arguments. A 409 (the agent is mid-run) waits and sends the same request again, and a 5xx or a network failure retries with the same key after 1, 2, 4 and 8 seconds, so a retry never adds a message twice. `backoff=` and `max_queued_waits=` change both. If the ledger file is not valid JSON, `run` warns on stderr, sets it aside as `<path>.corrupt` and starts empty, so finished actions may run again. Errors are `ArgenticError` with `.status` (None when no answer came back) and `.body`; `hint_for(error)` returns a next step for the ones a first run tends to hit.
 

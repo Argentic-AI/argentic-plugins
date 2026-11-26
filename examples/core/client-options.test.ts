@@ -4,7 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after, afterEach, before, test } from 'node:test'
-import { Argentic, ArgenticError, Ledger, defaultTimeoutMs, freeModel } from '../../adapters/typescript/argentic.ts'
+import { Argentic, ArgenticError, Ledger, defaultTimeoutMs } from '../../adapters/typescript/argentic.ts'
 
 const answer = { status: 'done', reply: 'hi', spent_usd: 0, turns: 1, wake_id: 'wk_1' }
 let delayMs = 0
@@ -37,7 +37,7 @@ afterEach(() => {
   delete process.env.MODEL_KEY
 })
 
-const body = { message: 'hi', model: freeModel }
+const body = { message: 'hi', model: { provider: 'p', id: 'm', prices: { in: 0, out: 0 } } }
 
 test('modelKey defaults to the MODEL_KEY environment variable', async () => {
   process.env.MODEL_KEY = 'mk_env'

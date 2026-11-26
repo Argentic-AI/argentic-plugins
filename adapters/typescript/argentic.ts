@@ -9,17 +9,26 @@ export const defaultBaseUrl = 'https://api.getargentic.com'
 export const defaultTimeoutMs = 300_000
 
 export interface ModelSpec {
-  provider: string
+  /** A named endpoint (`openai`, `anthropic`, `openrouter`, `nvidia`, ...). Give this or `base_url`, not both. */
+  provider?: string
+  /** Any public https OpenAI-compatible endpoint on port 443, for a provider with no preset. Give this or `provider`, not both. */
+  base_url?: string
   id: string
   /** Dollars per million tokens. `cache_hit` is what a cached input token costs, if your provider has a cache price. */
   prices: { in: number; out: number; cache_hit?: number }
 }
 
-/** The free default model. */
-export const freeModel: ModelSpec = {
-  provider: 'nvidia',
-  id: 'nvidia/nemotron-3.5-super-vl-120b-a12b',
-  prices: { in: 0, out: 0 },
+/**
+ * The model from `ARGENTIC_MODEL_ID` plus `ARGENTIC_MODEL_PROVIDER` (a named endpoint) or `ARGENTIC_MODEL_BASE_URL` (any public https
+ * OpenAI-compatible endpoint), and `ARGENTIC_PRICE_IN` / `ARGENTIC_PRICE_OUT` in dollars per million tokens. There is no default model:
+ * without `ARGENTIC_MODEL_ID` and one of the two it throws. `ARGENTIC_BASE_URL` is Argentic's own API, not the model's.
+ */
+export function modelFromEnv(e: Record<string, string | undefined> = process.env): ModelSpec {
+  if (!e.ARGENTIC_MODEL_ID) throw new Error('Set ARGENTIC_MODEL_ID to the model you want, with ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL.')
+  if (e.ARGENTIC_MODEL_PROVIDER && e.ARGENTIC_MODEL_BASE_URL) throw new Error('Set ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL, not both.')
+  if (!e.ARGENTIC_MODEL_PROVIDER && !e.ARGENTIC_MODEL_BASE_URL) throw new Error('Set ARGENTIC_MODEL_PROVIDER (a named endpoint) or ARGENTIC_MODEL_BASE_URL (a public https OpenAI-compatible endpoint).')
+  const where = e.ARGENTIC_MODEL_BASE_URL ? { base_url: e.ARGENTIC_MODEL_BASE_URL } : { provider: e.ARGENTIC_MODEL_PROVIDER }
+  return { ...where, id: e.ARGENTIC_MODEL_ID, prices: { in: Number(e.ARGENTIC_PRICE_IN ?? 0), out: Number(e.ARGENTIC_PRICE_OUT ?? 0) } }
 }
 
 /** What Argentic is told about a tool. It is declared, never executed by Argentic. */
@@ -197,9 +206,9 @@ export function hintFor(e: unknown): string | undefined {
   if (!(e instanceof ArgenticError)) return undefined
   const code = (e.body as { error?: string } | undefined)?.error
   if (e.status === 401) return 'Check ARGENTIC_API_KEY. A key only works on the API it was made for, so if you set ARGENTIC_BASE_URL, make the key in that dashboard.'
-  if (code === 'model_key_rejected') return 'Your model provider refused MODEL_KEY. Check it is a key for the provider in the error (a free NVIDIA key starts with nvapi-).'
+  if (code === 'model_key_rejected') return 'Your model provider refused MODEL_KEY. Check it is a key for the provider in the error.'
   if (code === 'bad_embed_key') return 'The API cannot use EMBED_KEY as sent: EMBED_PROVIDER is cohere (the default) or bedrock, EMBED_REGION goes with bedrock only, and the key has no spaces. Unset EMBED_KEY to recall by words alone.'
-  if (code === 'bad_model') return 'Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves, or unset it for the free default.'
+  if (code === 'bad_model') return 'Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves.'
   if (e.status === 402) return 'This account hit its usage limit. Argentic is free in beta, so there is nothing to buy: email hi@getargentic.com and we will raise it.'
   if (e.status === 429) return 'Too many requests a minute for this key. Wait for the time in the error and run the same command again.'
   if (e.status === undefined || e.status >= 500) return 'The API did not answer. Run the same command again in a minute: it picks up where it stopped.'
@@ -526,7 +535,8 @@ export interface RunOptions {
    * they are kept in memory for this call only (no file is written); then make your tools safe to repeat, with `ctx.idempotencyKey`.
    */
   ledgerPath?: string
-  model?: ModelSpec
+  /** The model to run, named by you: `{ provider | base_url, id, prices }`. There is no default. */
+  model: ModelSpec
   maxSteps?: number
   limits?: WakeBody['limits']
   /** Called just before each wake is sent, so a caller can say it is waiting on the model (the first answer can take several seconds). */
@@ -570,7 +580,7 @@ export async function run(opts: RunOptions): Promise<RunResult> {
   if (opts.fireDue ? opts.task !== undefined : opts.task === undefined) throw new Error('run: pass `task` (the new event) or `fireDue: true`, not both and not neither')
   const log = opts.log ?? ((line: string) => console.log(line))
   const maxSteps = opts.maxSteps ?? 8
-  const model = opts.model ?? freeModel
+  const model = opts.model
   const ledger = new Ledger(opts.ledgerPath)
   const byName = new Map(tools.map((t) => [t.name, t]))
   const decls: ToolDecl[] = tools.map(({ name, description, parameters, once_per }) => {

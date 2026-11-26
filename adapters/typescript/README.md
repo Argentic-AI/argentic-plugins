@@ -30,7 +30,7 @@ To vendor it instead: clone this repo and copy `argentic.ts`, `ai-sdk.ts` and `m
 ```ts
 import { tool } from 'ai'
 import { z } from 'zod'
-import { Argentic, run } from '@argentic-ai/client'
+import { Argentic, modelFromEnv, run } from '@argentic-ai/client'
 import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'
 
 const tools = { refund_order: tool({
@@ -46,11 +46,16 @@ const out = await run({
   client, agent: 'my-agent', runId: 'order-1182', ledgerPath: '.argentic-ledger.json',
   task: 'Refund order 1182.', system: 'Call one tool per turn.',
   tools: await fromAiSdkTools(tools),
+  model: modelFromEnv(), // or { provider: 'openai', id: '...', prices: { in: 0.25, out: 2 } }
 })
 console.log(out.reply)
 ```
 
 `task` is the new event: what happened since the agent last ran, never the earlier messages. Keep `agent` and `runId` the same when a run is retried (the id of the event that woke the agent is a good `runId`). `ledgerPath` is optional: with it, finished actions are written to that file so a killed process does not run them twice; without it they are kept in memory for the call, so make your tools safe to repeat with the `ctx.idempotencyKey` your `execute` receives. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `run` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
+
+## Your model
+
+You always name the model; there is no default. `model` is `{ provider, id, prices }` with `provider` a named endpoint (`openai`, `anthropic`, `openrouter`, ...), or `{ base_url, id, prices }` with `base_url` any public https OpenAI-compatible endpoint on port 443 (give one of the two, not both). Prices are dollars per million tokens. `modelFromEnv()` reads `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`, and throws if the model is not named. `ARGENTIC_BASE_URL` is Argentic's own API, not your model's.
 
 ## Once per operation (`once_per`, 0.1.7)
 
@@ -62,7 +67,7 @@ Declare an agent's tools once with `client.putTools(agent, tools)` and leave `to
 
 ```ts
 await client.putTools('support-bot', [{ name: 'book_slot', description: 'Book a slot.', parameters: { type: 'object', properties: { day: { type: 'string' } }, required: ['day'] } }])
-const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: freeModel, context: 'Plan: pro' }, 'book-1')
+const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: modelFromEnv(), context: 'Plan: pro' }, 'book-1')
 ```
 
 ## Structured tool results (0.1.11)

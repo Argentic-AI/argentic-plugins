@@ -14,19 +14,26 @@ cd argentic-plugins/examples/ai-sdk
 ```
 
 1. Get an Argentic API key at https://getargentic.com/platform
-2. Get a free NVIDIA NIM key at https://build.nvidia.com
-3. Export both (bash or zsh):
+2. Get a key for the model provider you want to use, and pick the model.
+3. Export them (bash or zsh):
 
    ```bash
    export ARGENTIC_API_KEY=aek_...
-   export MODEL_KEY=nvapi-...
+   export MODEL_KEY=...                       # your provider's key
+   export ARGENTIC_MODEL_PROVIDER=openai       # or ARGENTIC_MODEL_BASE_URL=https://... (any OpenAI-compatible endpoint)
+   export ARGENTIC_MODEL_ID=...
+   export ARGENTIC_PRICE_IN=0.25 ARGENTIC_PRICE_OUT=2  # dollars per million tokens
    ```
 
    fish:
 
    ```fish
    set -x ARGENTIC_API_KEY aek_...
-   set -x MODEL_KEY nvapi-...
+   set -x MODEL_KEY ...
+   set -x ARGENTIC_MODEL_PROVIDER openai
+   set -x ARGENTIC_MODEL_ID ...
+   set -x ARGENTIC_PRICE_IN 0.25
+   set -x ARGENTIC_PRICE_OUT 2
    ```
 
 4. Install (Node 22+):
@@ -57,7 +64,7 @@ Use `npm start -- --fresh` to start over with a new agent.
 
 ## Other models
 
-The default is the free NVIDIA model. To use another, set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`, and put that provider's key in `MODEL_KEY`.
+You always name the model: `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`, plus `ARGENTIC_MODEL_PROVIDER` (a named endpoint) or `ARGENTIC_MODEL_BASE_URL` (any public https OpenAI-compatible endpoint). Put your provider's key in `MODEL_KEY`.
 
 ## Tests
 
