@@ -1,6 +1,6 @@
 {
   "name": "@argentic-ai/client",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Argentic client for TypeScript. Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. Adapters for the Vercel AI SDK and Mastra.",
   "license": "MIT",
   "type": "module",
