@@ -32,7 +32,7 @@ test('kill after the mail left, resume: one email, the rest finishes', async () 
   const store = makeStore({} as NodeJS.ProcessEnv)
   const sid = `t${Date.now().toString(36)}0000000`
   const api = fakeApi()
-  const input = { store, sid, apiKey: 'aek_test', modelKey: 'k', baseUrl: 'http://engine.test', delayMs: 400, fetch: api.fetchFn }
+  const input = { store, sid, apiKey: 'aek_test', modelKey: 'k', model: { provider: 'openai', id: 'test-model', prices: { in: 0, out: 0 } }, baseUrl: 'http://engine.test', delayMs: 400, fetch: api.fetchFn }
 
   const first = runSession(input)
   // Wait until the provider has taken the message, then press Kill.

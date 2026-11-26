@@ -1,5 +1,6 @@
 import { delayMs, sharedModelKey } from '@/lib/config'
 import { visitor } from '@/lib/http'
+import { modelFromBody, pinnedModel } from '@/lib/model'
 import { runSession } from '@/lib/run'
 import { loadSession } from '@/lib/session'
 import { store } from '@/lib/store'
@@ -18,6 +19,10 @@ export async function POST(req: Request) {
   const modelKey = req.headers.get('x-model-key')?.trim() || sharedModelKey()
   if (!apiKey) return Response.json({ error: 'ARGENTIC_API_KEY is not set on this deployment. See the README.' }, { status: 503 })
   if (!modelKey) return Response.json({ error: 'Paste your model key first. It is sent with this request and never stored.' }, { status: 400 })
+
+  // There is no default model: the one the deployer pinned, or the one the page named.
+  const picked = pinnedModel() ?? modelFromBody(await req.json().catch(() => null))
+  if (!picked.ok) return Response.json({ error: picked.error }, { status: 400 })
 
   // Each run spends the deployer's Argentic quota, so cap how often one address can start one.
   const ip = (req.headers.get('x-forwarded-for') ?? 'local').split(',')[0].trim()
@@ -46,7 +51,7 @@ export async function POST(req: Request) {
         }
       }
       try {
-        await runSession({ store: s, sid, apiKey, modelKey, baseUrl: process.env.ARGENTIC_BASE_URL, delayMs: delayMs(), signal: req.signal, emit: (v) => send(v) })
+        await runSession({ store: s, sid, apiKey, modelKey, model: picked.model, baseUrl: process.env.ARGENTIC_BASE_URL, delayMs: delayMs(), signal: req.signal, emit: (v) => send(v) })
         send({ done: true })
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)

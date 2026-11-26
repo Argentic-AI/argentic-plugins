@@ -9,5 +9,7 @@ export const delayMs = () => Number(process.env.ACTION_DELAY_MS ?? 2500)
 export const setup = () => ({
   hasApiKey: Boolean(process.env.ARGENTIC_API_KEY),
   hasModelKey: Boolean(sharedModelKey()),
+  /** The deployer pinned the model in the environment, so the page does not ask for one. */
+  hasModel: Boolean(process.env.ARGENTIC_MODEL_ID),
   persistent: usingRedis(),
 })

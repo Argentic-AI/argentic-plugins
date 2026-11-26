@@ -1,7 +1,7 @@
 // The run loop: wake the agent, carry out the actions it asks for, hand the results back.
 // It is the same shape as `run` in @argentic-ai/client (`runDurable` before 0.2.0), with two differences a web app needs:
 // the ledger lives in the state store (not a local file), and a Kill can stop it between any two awaits.
-import { Argentic, freeModel, toArgenticSchema, type ModelSpec, type ToolDecl } from '@argentic-ai/client'
+import { Argentic, toArgenticSchema, type ModelSpec, type ToolDecl } from '@argentic-ai/client'
 import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'
 import { killKey, loadSession, saveSession, view, type LineKind, type Session, type View } from './session'
 import type { Store } from './store'
@@ -13,7 +13,8 @@ export interface RunInput {
   apiKey: string
   modelKey?: string
   baseUrl?: string
-  model?: ModelSpec
+  /** The model to run. There is no default: the caller names one (lib/model.ts). */
+  model: ModelSpec
   delayMs?: number
   maxSteps?: number
   /** Aborts when the browser goes away (Kill, closed tab). Counts as a kill, like the flag in the store. */
@@ -25,15 +26,6 @@ export interface RunInput {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const safeKey = (s: string) => s.replace(/[^A-Za-z0-9\-_.:]/g, '-').slice(0, 128)
-
-export function modelFromEnv(env: NodeJS.ProcessEnv = process.env): ModelSpec {
-  if (!env.ARGENTIC_MODEL_ID) return freeModel
-  return {
-    provider: env.ARGENTIC_MODEL_PROVIDER ?? freeModel.provider,
-    id: env.ARGENTIC_MODEL_ID,
-    prices: { in: Number(env.ARGENTIC_PRICE_IN ?? 0), out: Number(env.ARGENTIC_PRICE_OUT ?? 0) },
-  }
-}
 
 export async function runSession(input: RunInput): Promise<View> {
   const { store, sid } = input
@@ -75,7 +67,7 @@ export async function runSession(input: RunInput): Promise<View> {
     description: description || name,
     parameters: toArgenticSchema(parameters),
   }))
-  const model = input.model ?? modelFromEnv()
+  const model = input.model
 
   try {
     let message = task
