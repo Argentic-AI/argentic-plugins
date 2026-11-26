@@ -9,7 +9,7 @@ import { join } from 'node:path'
 const sink = process.env.CRASHTEST_SINK_URL
 const stateDir = process.env.CRASHTEST_STATE_DIR
 const base = (process.env.CRASHTEST_UPSTREAM_MODEL_URL ?? process.env.AGENT_MODEL_URL ?? 'https://integrate.api.nvidia.com/v1').replace(/\/+$/, '')
-const model = process.env.AGENT_MODEL_ID ?? 'nvidia/nemotron-3.5-lightning-30b-a3b'
+const model = process.env.AGENT_MODEL_ID ?? 'nvidia/nemotron-3.5-super-vl-120b-a12b'
 if (!sink || !stateDir) throw new Error('Run me under crash-test.')
 const keyed = Boolean(process.env.LLM_KEYED)
 const progress = join(stateDir, 'llm-progress.json')
