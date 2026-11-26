@@ -16,11 +16,14 @@ interface View {
   reply?: string
   spentUsd: number
 }
-interface Setup { hasApiKey: boolean; hasModelKey: boolean; persistent: boolean }
+interface Setup { hasApiKey: boolean; hasModelKey: boolean; hasModel: boolean; persistent: boolean }
+interface Picked { endpoint: string; id: string; priceIn: string; priceOut: string }
 interface Proof { wakes: { id: string; turns: number; mismatched: number; unverifiable: number }[]; link: string | null; error?: string }
 
 const empty: View = { status: 'idle', agent: '', wakes: [], log: [], outbox: [], finished: 0, spentUsd: 0 }
 const KEY_STORE = 'support-agent-model-key'
+const MODEL_STORE = 'support-agent-model'
+const noModel: Picked = { endpoint: '', id: '', priceIn: '', priceOut: '' }
 
 const icons: Record<LineKind, React.ReactNode> = {
   info: <span className="mt-[7px] block size-1.5 rounded-full bg-muted/60" />,
@@ -37,6 +40,7 @@ const btn =
   'inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-medium sm:h-10 disabled:cursor-not-allowed disabled:border disabled:border-line disabled:bg-panel disabled:text-muted'
 const primary = `${btn} bg-fg text-[var(--accent-fg)] hover:opacity-85`
 const secondary = `${btn} border border-line hover:bg-panel`
+const field = 'h-11 w-full rounded-xl border border-line bg-bg px-4 font-mono text-[13px] outline-none placeholder:text-muted focus-visible:border-fg'
 
 export function Console() {
   const [v, setV] = useState<View>(empty)
@@ -44,6 +48,7 @@ export function Console() {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState('')
   const [modelKey, setModelKey] = useState('')
+  const [picked, setPicked] = useState<Picked>(noModel)
   const [proof, setProof] = useState<Proof | null>(null)
   const [proofBusy, setProofBusy] = useState(false)
   const abort = useRef<AbortController | null>(null)
@@ -60,6 +65,7 @@ export function Console() {
   useEffect(() => {
     try {
       setModelKey(sessionStorage.getItem(KEY_STORE) ?? '')
+      setPicked({ ...noModel, ...JSON.parse(sessionStorage.getItem(MODEL_STORE) ?? '{}') })
     } catch {}
     refresh().catch(() => setError('Could not reach the server.'))
   }, [refresh])
@@ -69,7 +75,16 @@ export function Console() {
   }, [v.log.length])
 
   const keyNeeded = setup ? !setup.hasModelKey : false
-  const canRun = Boolean(setup?.hasApiKey) && (!keyNeeded || modelKey.trim().length > 0)
+  const modelNeeded = setup ? !setup.hasModel : false
+  const modelNamed = !modelNeeded || (picked.endpoint.trim() && picked.id.trim() && picked.priceIn.trim() && picked.priceOut.trim())
+  const canRun = Boolean(setup?.hasApiKey) && (!keyNeeded || modelKey.trim().length > 0) && Boolean(modelNamed)
+  const pick = (k: keyof Picked) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = { ...picked, [k]: e.target.value }
+    setPicked(next)
+    try {
+      sessionStorage.setItem(MODEL_STORE, JSON.stringify(next))
+    } catch {}
+  }
   const stopped = v.status === 'killed' || v.status === 'error' || (v.status === 'running' && !running)
   const resumable = v.wakes.length > 0 && v.status !== 'done'
 
@@ -80,7 +95,7 @@ export function Console() {
     abort.current = ctl
     setRunning(true)
     try {
-      const res = await fetch('/api/run', { method: 'POST', headers: modelKey.trim() ? { 'x-model-key': modelKey.trim() } : {}, signal: ctl.signal })
+      const res = await fetch('/api/run', { method: 'POST', headers: { 'content-type': 'application/json', ...(modelKey.trim() ? { 'x-model-key': modelKey.trim() } : {}) }, body: JSON.stringify({ model: { endpoint: picked.endpoint.trim(), id: picked.id.trim(), priceIn: picked.priceIn.trim(), priceOut: picked.priceOut.trim() } }), signal: ctl.signal })
       if (!res.ok || !res.body) {
         const j = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(j.error ?? `The server answered ${res.status}.`)
@@ -156,6 +171,31 @@ export function Console() {
         </div>
       )}
 
+      {modelNeeded && (
+        <fieldset className="flex max-w-[520px] flex-col gap-3 text-sm">
+          <legend className="font-medium">Your model</legend>
+          <label className="flex flex-col gap-1">
+            <span>Provider, or the https address of an OpenAI-compatible endpoint</span>
+            <input value={picked.endpoint} onChange={pick('endpoint')} autoComplete="off" autoCapitalize="none" spellCheck={false} className={field} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span>Model id</span>
+            <input value={picked.id} onChange={pick('id')} autoComplete="off" autoCapitalize="none" spellCheck={false} className={field} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-1">
+              <span>Input price</span>
+              <input value={picked.priceIn} onChange={pick('priceIn')} inputMode="decimal" autoComplete="off" className={field} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span>Output price</span>
+              <input value={picked.priceOut} onChange={pick('priceOut')} inputMode="decimal" autoComplete="off" className={field} />
+            </label>
+          </div>
+          <span className="max-w-[60ch] text-muted">Dollars per million tokens, from your provider’s price list. A free model is 0. This app has no default model: you name it.</span>
+        </fieldset>
+      )}
+
       {keyNeeded && (
         <label className="flex flex-col gap-2 text-sm">
           <span className="font-medium">Your model key</span>
@@ -163,7 +203,6 @@ export function Console() {
             type="password"
             autoComplete="off"
             spellCheck={false}
-            placeholder="nvapi-…"
             value={modelKey}
             onChange={(e) => {
               setModelKey(e.target.value)
@@ -174,8 +213,7 @@ export function Console() {
             className="h-11 w-full max-w-[520px] rounded-xl border border-line bg-bg px-4 font-mono text-[13px] outline-none placeholder:text-muted focus-visible:border-fg"
           />
           <span className="max-w-[60ch] text-muted">
-            The default model is free on NVIDIA: get a key at{' '}
-            <a className="underline underline-offset-4" href="https://build.nvidia.com" target="_blank" rel="noreferrer">build.nvidia.com ↗</a>. It stays in this tab and is forwarded to Argentic with each call. This app does not store it, and neither does Argentic.
+            The key for your model’s provider. It stays in this tab and is forwarded to Argentic with each call. This app does not store it, and neither does Argentic.
           </span>
         </label>
       )}

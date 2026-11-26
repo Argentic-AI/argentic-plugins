@@ -9,7 +9,7 @@ It is built on the [Vercel AI SDK](https://ai-sdk.dev): the two tools are ordina
 ## What you need
 
 - An Argentic API key (`aek_...`): make one at https://getargentic.com/platform under Keys. It goes in `ARGENTIC_API_KEY`.
-- A model key. The default model is a free NVIDIA one: get a key at https://build.nvidia.com (it starts with `nvapi-`). Paste it into the page. It stays in the tab and is forwarded to Argentic with each call; this app does not store it. For `npm run dev` you can put it in `MODEL_KEY` instead. A deployed site ignores `MODEL_KEY` on purpose, so nobody can run your model key up. Don't try to work around that on a public deployment.
+- A model and its key. There is no default model: name one in the page (a provider or an https address, its id, its prices in dollars per million tokens) and paste the key for that provider. The key stays in the tab and is forwarded to Argentic with each call; this app does not store it. For `npm run dev` you can put the key in `MODEL_KEY` and pin the model with `ARGENTIC_MODEL_*` instead. A deployed site ignores `MODEL_KEY` on purpose, so nobody can run your model key up. Don't try to work around that on a public deployment.
 
 ## Run it locally
 
@@ -38,7 +38,7 @@ A cut-off action runs again on resume. It is safe because every action carries a
 |---|---|
 | The tools (add a refund, a CRM lookup, a real email) | `lib/tools.ts`: plain AI SDK `tool()` objects. Use `toolCallId` as the idempotency key for anything with a side effect. |
 | The agent's instructions and the ticket | `system`, `ticket` and `task` in `lib/tools.ts` |
-| The model | `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` (prices are dollars per million tokens) |
+| The model (pinned for every visitor; the page asks for one when it is not set) | `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` (prices are dollars per million tokens) |
 | The loop | `lib/run.ts`: wake, run the actions it asks for, write each result down, hand the results back. About 80 lines. |
 | Where state lives | `lib/store.ts` |
 
@@ -68,7 +68,7 @@ The page is public and every visitor can start a run, which spends your Argentic
 
 ## Limits
 
-- The free beta allows 30 requests a minute, 20 turns and 10 minutes per call. The free NVIDIA model is rate limited; if a run stops with `provider_rate_limited`, wait half a minute and press Resume.
+- The free beta allows 30 requests a minute, 20 turns and 10 minutes per call. Some providers rate limit; if a run stops with `provider_rate_limited`, wait half a minute and press Resume.
 - The sandbox inbox is not an email service. Nothing leaves the app.
 - This template shows crash recovery and proof of what ran. It does not show the agent's memory.
 

@@ -1,7 +1,7 @@
 // A support agent that sends one email. Press Ctrl-C while it works, run it again, and it does not send twice.
 // Argentic runs the loop and keeps the journal; the tools are ordinary Vercel AI SDK tool() objects.
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { Argentic, hintFor, run } from '@argentic-ai/client'
+import { Argentic, hintFor, modelFromEnv, run } from '@argentic-ai/client'
 import { fromAiSdkTools } from '@argentic-ai/client/ai-sdk'
 import { tool } from 'ai'
 import { z } from 'zod'
@@ -10,6 +10,14 @@ const apiKey = process.env.ARGENTIC_API_KEY
 const modelKey = process.env.MODEL_KEY
 if (!apiKey || !modelKey) {
   console.error('Set ARGENTIC_API_KEY and MODEL_KEY first (see .env.example).')
+  process.exit(1)
+}
+// There is no default model: you name it (ARGENTIC_MODEL_ID, plus ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL, and the two prices).
+let model
+try {
+  model = modelFromEnv()
+} catch (e) {
+  console.error(`${e instanceof Error ? e.message : String(e)} (see .env.example)`)
   process.exit(1)
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -65,6 +73,7 @@ try {
     client,
     agent,
     runId,
+    model,
     task:
       'New ticket from dana@example.com: "Order 1182 arrived broken." Look up the order, then email the customer: ' +
       'apologise and say a replacement ships today, in under 80 words.',
