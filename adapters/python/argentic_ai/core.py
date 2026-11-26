@@ -50,7 +50,7 @@ class Action(TypedDict, total=False):
 
 
 # The free default model (a free NVIDIA key from https://build.nvidia.com works with it).
-FREE_MODEL: ModelSpec = {"provider": "nvidia", "id": "nvidia/nemotron-3.5-lightning-30b-a3b", "prices": {"in": 0.0, "out": 0.0}}
+FREE_MODEL: ModelSpec = {"provider": "nvidia", "id": "nvidia/nemotron-3.5-super-vl-120b-a12b", "prices": {"in": 0.0, "out": 0.0}}
 
 
 class RetryLater(Exception):

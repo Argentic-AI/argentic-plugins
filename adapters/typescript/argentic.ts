@@ -18,7 +18,7 @@ export interface ModelSpec {
 /** The free default model. */
 export const freeModel: ModelSpec = {
   provider: 'nvidia',
-  id: 'nvidia/nemotron-3.5-lightning-30b-a3b',
+  id: 'nvidia/nemotron-3.5-super-vl-120b-a12b',
   prices: { in: 0, out: 0 },
 }
 

@@ -103,7 +103,7 @@ class ClientTest(unittest.TestCase):
 
     def test_the_free_model_is_the_nvidia_one(self):
         self.assertEqual((FREE_MODEL["provider"], FREE_MODEL["id"], FREE_MODEL["prices"]),
-                         ("nvidia", "nvidia/nemotron-3.5-lightning-30b-a3b", {"in": 0, "out": 0}))
+                         ("nvidia", "nvidia/nemotron-3.5-super-vl-120b-a12b", {"in": 0, "out": 0}))
 
     # ---- answers ----
 
