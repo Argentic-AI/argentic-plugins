@@ -71,6 +71,13 @@ class ArgenticError(Exception):
         self.body = body
 
 
+def _with_text(body: dict[str, Any], results: list[Mapping[str, Any]]) -> dict[str, Any]:
+    """Without `results` the API reads them only from the message: a wake that has none says them in its text."""
+    if "message" in body or body.get("fire_due"):
+        return body
+    return {**body, "message": "Results of the tools you asked for:\n" + json.dumps(list(results))}
+
+
 def _refuses_results(e: ArgenticError) -> bool:
     """True for a 400 whose detail names `results`: a server that does not know the field yet (strict body validation)."""
     if e.status != 400 or not isinstance(e.body, dict) or e.body.get("detail") is None:
@@ -267,9 +274,10 @@ class Argentic:
 
         `results` is what your app's tools returned for the `actions` of the previous wake, as `{"seq": n, "result": ...}`
         entries (`seq` is the action's `seq`, `result` exactly what the tool returned). The API journals each as the real
-        result of that call. Send it together with a `message`, never with `fire_due`; at most 100 entries. A server that
-        does not know the field yet answers 400 and names `results`: the same wake then goes out once more under the same
-        key without it, and this client leaves `results` out from then on."""
+        result of that call, and the agent reads it as that call's result, so no `message` is needed with it. Never with
+        `fire_due`; at most 100 entries. A server that does not know the field yet answers 400 and names `results`: the
+        same wake then goes out once more under the same key without it (with the results as the message text when there
+        is no message), and this client leaves `results` out from then on."""
         body: dict[str, Any] = {"model": model}
         if message is not None:
             body["message"] = message
@@ -302,9 +310,9 @@ class Argentic:
                     raise
                 self._results_refused = True
                 self._log("  the API does not take structured results yet; sending the message text only")
-                hdrs, data = self._send("wake", path, body, headers)
+                hdrs, data = self._send("wake", path, _with_text(body, results), headers)
         else:
-            hdrs, data = self._send("wake", path, body, headers)
+            hdrs, data = self._send("wake", path, body if results is None else _with_text(body, results), headers)
         return WakeResponse(
             status=data.get("status", ""),
             reply=data.get("reply") or "",
@@ -575,9 +583,9 @@ def run(
     API sent back its stored answer or the ledger kept a stopped one, and `on_action(seq, tool, result, fresh)` for
     every action, `fresh` being False for one the ledger says already finished, which is not run again.
 
-    Each follow-up wake carries the tool results as the message text and, unless `structured_results=False`, as the
-    structured `results` field too, so the API journals the real result of every call (a server that does not know
-    the field is detected once and not sent it again)."""
+    Each follow-up wake carries the tool results as the structured `results` field, so the API journals the real result
+    of every call and the agent reads each as that call's result; with `structured_results=False` they go as message
+    text instead (a server that does not know the field is detected once and sent the text from then on)."""
     if fire_due == (task is not None):
         raise ValueError("run: pass `task` (the new event) or `fire_due=True`, not both and not neither")
     ledger = Ledger(ledger_path)
@@ -592,8 +600,11 @@ def run(
     fresh = 0  # actions newly executed in this process
 
     for step in range(max_steps):
+        answers = structured_results and step > 0 and bool(previous)
         if step == 0:
             message = task
+        elif answers:
+            message = None  # the results go as `results`, and the agent reads each as its call's result
         else:
             message = "Results of the tools you asked for:\n" + json.dumps(previous)
         key = _key_part(f"{run_id}.{step}")[:128]

@@ -56,14 +56,14 @@ class StructuredResultsTest(unittest.TestCase):
         return run(self.client, agent=kw.pop("agent", "a1"), run_id=kw.pop("run_id", "r"), task="go", tools=self.tools(),
                            ledger_path=os.path.join(self.tmp.name, ledger), log=lambda s: None, **kw)
 
-    def test_a_follow_up_wake_carries_results_and_still_the_text_message(self):
+    def test_a_follow_up_wake_carries_results_and_no_message(self):
         server = self.start(refund_handler())
         self.assertEqual(self.run_it().status, "done")
         bodies = [r[2] for r in server.requests]
         self.assertEqual(len(bodies), 4)
         for i, tool in ((1, "refund_order"), (2, "send_email"), (3, "close_ticket")):
             self.assertEqual(bodies[i]["results"], [{"seq": i, "result": {"ok": tool}}])
-            self.assertEqual(bodies[i]["message"], TEXT + json.dumps([{"tool": tool, "seq": i, "result": {"ok": tool}}]))
+            self.assertNotIn("message", bodies[i])  # the agent reads each result as its call's result
 
     def test_the_first_wake_has_no_results(self):
         server = self.start(refund_handler())
@@ -77,7 +77,7 @@ class StructuredResultsTest(unittest.TestCase):
         sent = [("results" in r[2], r[1]["idempotency-key"]) for r in server.requests]
         # wake 0; wake 1 refused with results, then resent without; then wakes 2 and 3 never carry results
         self.assertEqual(sent, [(False, "r.0"), (True, "r.1"), (False, "r.1"), (False, "r.2"), (False, "r.3")])
-        self.assertEqual(server.requests[2][2]["message"], TEXT + json.dumps([{"tool": "refund_order", "seq": 1, "result": {"ok": "refund_order"}}]))
+        self.assertEqual(server.requests[2][2]["message"], TEXT + json.dumps([{"seq": 1, "result": {"ok": "refund_order"}}]))
         # the client remembers: a second run on it never sends results
         before = len(server.requests)
         self.run_it(ledger="second.json", run_id="r2", agent="a2")

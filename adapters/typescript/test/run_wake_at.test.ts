@@ -58,14 +58,14 @@ test('without schedule the field is not sent', async () => {
   } finally { await m.close() }
 })
 
-test('fireDue wakes with fire_due and no message; the follow-up wake carries results as usual', async () => {
+test('fireDue wakes with fire_due and no message; the follow-up wake carries the results alone', async () => {
   const { m, bodies } = await server()
   try {
     const ran: string[] = []
     const out = await runAgent({ client: new Argentic({ apiKey: 'k', baseUrl: m.url }), agent: 'a', runId: 'due-1', fireDue: true, tools: [ping(ran)], model: MODEL, schedule: true, log: () => {} })
     assert.equal(bodies[0].fire_due, true)
     assert.equal('message' in bodies[0], false)
-    assert.equal(typeof bodies[1].message, 'string')
+    assert.equal('message' in bodies[1], false)
     assert.deepEqual(bodies[1].results, [{ seq: 1, result: { pong: true } }])
     assert.equal(bodies[1].fire_due, undefined)
     assert.equal(out.wakeAt, WAKE_AT)

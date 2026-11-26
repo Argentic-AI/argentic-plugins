@@ -25,7 +25,6 @@ after(() => rmSync(dir, { recursive: true, force: true }))
 let n = 0
 const ledgerPath = () => join(dir, `ledger-${++n}.json`)
 
-const TEXT = (results: unknown[]) => 'Results of the tools you asked for:\n' + JSON.stringify(results)
 
 type Seen = { key: string | undefined; body: any }
 
@@ -63,7 +62,7 @@ async function server(refuseResults: boolean): Promise<{ m: Mock; seen: Seen[] }
 const run = (m: Mock, extra: Partial<Parameters<typeof runAgent>[0]> = {}, client = new Argentic({ apiKey: 'aek_test', baseUrl: m.url })) =>
   runAgent({ client, agent: 'a', runId: 'r', task: 'go', tools: tools(), model: MODEL, ledgerPath: ledgerPath(), log: () => {}, ...extra })
 
-test('a follow-up wake carries results with the right seq and result, and still the text message', async () => {
+test('a follow-up wake carries results with the right seq and result, and no message (the agent reads each as its call\'s result)', async () => {
   const { m, seen } = await server(false)
   try {
     const out = await run(m)
@@ -71,9 +70,9 @@ test('a follow-up wake carries results with the right seq and result, and still 
     assert.equal(seen.length, 3)
     const first = [{ seq: 1, result: { name: 'read_a', id: 'x' } }, { seq: 2, result: { name: 'read_b', id: 'y' } }]
     assert.deepEqual(seen[1]!.body.results, first)
-    assert.equal(seen[1]!.body.message, TEXT(first.map((r, i) => ({ tool: ['read_a', 'read_b'][i], ...r }))))
+    assert.equal('message' in seen[1]!.body, false)
     assert.deepEqual(seen[2]!.body.results, [{ seq: 3, result: { name: 'read_a', id: 'z' } }])
-    assert.equal(seen[2]!.body.message, TEXT([{ tool: 'read_a', seq: 3, result: { name: 'read_a', id: 'z' } }]))
+    assert.equal('message' in seen[2]!.body, false)
   } finally {
     await m.close()
   }

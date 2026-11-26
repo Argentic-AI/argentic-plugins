@@ -102,9 +102,8 @@ class RunTest(unittest.TestCase):
         client = Argentic(api_key="k", base_url=server.url, sleep=lambda s: None, log=lambda s: None)
         run(client, agent="a2", run_id="r", task="go", ledger_path=self.ledger_path("x.json"), log=lambda s: None,
                     tools=[Tool("refund_order", "", SCHEMA, boom)])
-        results = json.loads(server.requests[-1][2]["message"].split("\n", 1)[1])
-        self.assertEqual(results, [{"tool": "refund_order", "seq": 2, "result": {"error": "card declined"}}])
-        self.assertEqual(json.loads(server.requests[1][2]["message"].split("\n", 1)[1])[0]["result"], {"error": "unknown tool"})
+        self.assertEqual(server.requests[-1][2]["results"], [{"seq": 2, "result": {"error": "card declined"}}])
+        self.assertEqual(server.requests[1][2]["results"][0]["result"], {"error": "unknown tool"})
 
     # ---- async tools ----
 

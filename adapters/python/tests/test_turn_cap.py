@@ -34,7 +34,8 @@ class FakeArgentic:
 
     def wake(self, key, body):
         with self.lock:
-            self.log.append((key, body["message"]))
+            said = body.get("message") or json.dumps(body.get("results"))  # a follow-up wake sends only results
+            self.log.append((key, said))
             prior = self.answers.get(key)
             if prior and prior["status"] == "done":
                 return prior, True
@@ -43,7 +44,7 @@ class FakeArgentic:
                 resp = {"status": "done", "reply": "No such source.", "spent_usd": 0, "turns": 2, "wake_id": "wk_0",
                         "resumed": True, "actions": [prior["actions"][0],
                                                      {"id": 2, "tool": "save_note", "args": {"text": "no such source"}, "seq": self.seq}]}
-            elif "SRC-7" in body["message"]:
+            elif "SRC-7" in said:
                 resp = {"status": "done", "reply": "Summary: SRC-7", "spent_usd": 0, "turns": 1,
                         "wake_id": f"wk_{len(self.answers)}", "actions": []}
             else:
@@ -120,7 +121,7 @@ class TurnCapTest(unittest.TestCase):
         self.assertEqual(out.reply, "Summary: SRC-7")
         self.assertEqual(self.ran, ["read_source"])
         self.assertEqual(self.keys(), ["r.0", "r.1"])
-        self.assertEqual(self.fake.log[1][1], 'Results of the tools you asked for:\n[{"tool": "read_source", "seq": 1, "result": "SRC-7"}]')
+        self.assertEqual(self.fake.log[1][1], '[{"seq": 1, "result": "SRC-7"}]')  # the results alone, as `results`
 
     def test_crash_resumes_by_sending_the_result(self):
         with self.assertRaises(Crash):
