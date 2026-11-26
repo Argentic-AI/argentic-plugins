@@ -9,6 +9,8 @@ import { makeTools, outboxCounts, system, task } from './refund.ts'
 
 // An in-process stand-in for the Argentic API: stored answers per key, seq per agent,
 // a scripted model, one 409 and one 503.
+/** What a wake told the agent: its message, or for a follow-up wake that sends only results, those results. */
+const said = (raw: string): string => { const b = JSON.parse(raw); return b.message ?? JSON.stringify(b.results) }
 const script = [
   { tool: 'refund_order', args: { order_id: '1182', amount_usd: 42 } },
   { tool: 'send_email', args: { to: 'dana@example.com', subject: 'Refund', body: 'Your refund is on its way.' } },
@@ -40,10 +42,10 @@ function fakeServer() {
     const prior = answers.get(key)
     if (prior) {
       if (prior.body !== raw) return send(422, { error: 'idempotency_key_reused' })
-      log.push({ key, replay: true, message: JSON.parse(raw).message })
+      log.push({ key, replay: true, message: said(raw) })
       return send(200, prior.json, { 'Idempotent-Replay': 'true' })
     }
-    log.push({ key, replay: false, message: JSON.parse(raw).message })
+    log.push({ key, replay: false, message: said(raw) })
     const turn = script[wakes]
     const wakeId = `wk_${String(wakes).padStart(18, '0')}`
     wakes++
@@ -113,8 +115,8 @@ test('a crash after the first action resumes without repeating it', async () => 
   assert.equal(step0.length, 2)
   assert.equal(step0[1].replay, true)
   assert.equal(step0[0].message, step0[1].message)
-  // The follow-up message is built from the ledger, so a rerun would send the same bytes.
-  assert.match(fake.log.find((l) => l.key === 'run-test.1')!.message, /^Results of the tools you asked for:\n\[\{"tool":"refund_order","seq":1/)
+  // The follow-up wake is built from the ledger, so a rerun would send the same bytes: the results alone, no message.
+  assert.match(fake.log.find((l) => l.key === 'run-test.1')!.message, /^\[\{"seq":1,"result":/)
 })
 
 test('replay returns a summary shape', async () => {

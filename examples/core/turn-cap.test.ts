@@ -22,7 +22,8 @@ function fakeServer() {
       res.end(JSON.stringify(json))
     }
     const key = String(req.headers['idempotency-key'])
-    const { message } = JSON.parse(raw) as { message: string }
+    const b = JSON.parse(raw) as { message?: string; results?: unknown }
+    const message = b.message ?? JSON.stringify(b.results)   // a follow-up wake sends only results
     log.push({ key, message })
     const prior = answers.get(key)
     if (prior && (prior.json as { status: string }).status === 'done') return send(prior.json, { 'Idempotent-Replay': 'true' })
@@ -86,7 +87,7 @@ test('the results of a turn_cap wake are sent in the next wake', async () => {
   assert.equal(out.reply, 'Summary: SRC-7')
   assert.deepEqual(ran, ['read_source'])
   assert.deepEqual(fake.log.map((l) => l.key), ['r.0', 'r.1'])
-  assert.match(fake.log[1].message, /^Results of the tools you asked for:\n\[\{"tool":"read_source","seq":1,"result":"SRC-7"\}\]$/)
+  assert.equal(fake.log[1].message, '[{"seq":1,"result":"SRC-7"}]')
 })
 
 test('a crash after a turn_cap wake\'s action resumes by sending its result, not by asking the wake again', async () => {

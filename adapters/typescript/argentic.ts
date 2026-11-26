@@ -112,7 +112,7 @@ export function withOncePer<T extends ToolDecl>(tools: T[], oncePer?: Record<str
 }
 
 export interface WakeBody {
-  /** Required unless `fire_due` is set; the API refuses both together. */
+  /** Required unless `fire_due` or `results` is set; the API refuses `message` with `fire_due`. */
   message?: string
   /** Wake for the plans that have fallen due instead of with a message: send it at the `wake_at` an earlier answer gave. */
   fire_due?: boolean
@@ -130,10 +130,10 @@ export interface WakeBody {
   limits?: { max_usd?: number; max_turns?: number }
   /**
    * What your app's tools returned for the `actions` of the previous wake, as `{ seq, result }`: `seq` is the action's
-   * `seq` and `result` is exactly what the tool returned. The API journals each as the real result of that call. Send it
-   * together with a `message` (the text the model reads), never with `fire_due`; at most 100 entries. A server that does
-   * not know the field yet refuses it, and `wake()` then sends the same wake again without it and stops sending it on
-   * this client.
+   * `seq` and `result` is exactly what the tool returned. The API journals each as the real result of that call, and the
+   * agent reads it as that call's result, so no `message` is needed with it. Never with `fire_due`; at most 100 entries. A
+   * server that does not know the field yet refuses it, and `wake()` then sends the same wake again without it (with the
+   * results as the message text when there is no message) and stops sending it on this client.
    */
   results?: { seq: number; result: unknown }[]
 }
@@ -270,7 +270,9 @@ export class Argentic {
     }
     if (this.modelKey) headers['X-Model-Key'] = this.modelKey
     const path = `/v1/agents/${encodeURIComponent(agent)}/wake`
-    const { results, ...plain } = body
+    const { results, ...rest } = body
+    // Without `results` the API reads them only from the message: a wake that has none says them in its text.
+    const plain: WakeBody = results !== undefined && rest.message === undefined && !rest.fire_due ? { ...rest, message: 'Results of the tools you asked for:\n' + JSON.stringify(results) } : rest
     let res: Response
     if (results === undefined || this.resultsRefused) {
       res = await this.send(path, JSON.stringify(plain), headers)
@@ -520,8 +522,8 @@ export interface RunOptions {
   /** Kill this process hard after the Nth newly executed action (to try a crash). */
   crashAfterActions?: number
   /**
-   * Send each follow-up wake's tool results as the structured `results` field as well as in the message text, so the API
-   * journals the real result of every call. Default true. Set false to send the text only.
+   * Send each follow-up wake's tool results as the structured `results` field, so the API journals the real result of every
+   * call and the agent reads each as that call's result. Default true. Set false to send them as message text only.
    */
   structuredResults?: boolean
   log?: (line: string) => void
@@ -572,9 +574,10 @@ export async function run(opts: RunOptions): Promise<RunResult> {
 
   for (let step = 0; step < maxSteps; step++) {
     const key = safeKey(`${opts.runId}.${step}`)
-    const body: WakeBody = step === 0 && opts.fireDue ? { fire_due: true, model, tools: decls } : { message, model, tools: decls }
+    // A follow-up wake sends the results as `results` and nothing else: the agent reads each as its call's result, so the text would say it twice.
+    const answers = structured && step > 0 && pending.length > 0
+    const body: WakeBody = step === 0 && opts.fireDue ? { fire_due: true, model, tools: decls } : answers ? { results: pending, model, tools: decls } : { message, model, tools: decls }
     if (opts.schedule) body.schedule = true
-    if (structured && step > 0 && pending.length) body.results = pending
     opts.onWakeStart?.({ step })
     if (opts.system) body.system = opts.system
     if (opts.limits) body.limits = opts.limits
