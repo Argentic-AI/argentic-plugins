@@ -32,10 +32,13 @@ MAX_QUEUED_WAITS = 60  # 409 "queued" answers waited out before giving up
 TIMEOUT = 300.0  # seconds a socket may stay silent: a wake can run a long time, as with Node's fetch (300 s)
 
 
-class ModelSpec(TypedDict):
-    """The model a wake runs on. `prices` are dollars per million tokens, under `in` and `out`."""
+class ModelSpec(TypedDict, total=False):
+    """The model a wake runs on. Give `provider` (a named endpoint) or `base_url` (any public https
+    OpenAI-compatible endpoint on port 443), not both, plus `id` and `prices` (dollars per million
+    tokens, under `in` and `out`)."""
 
     provider: str
+    base_url: str
     id: str
     prices: dict[str, float]
 
@@ -47,10 +50,6 @@ class Action(TypedDict, total=False):
     tool: str
     args: dict[str, Any]
     seq: int
-
-
-# The free default model (a free NVIDIA key from https://build.nvidia.com works with it).
-FREE_MODEL: ModelSpec = {"provider": "nvidia", "id": "nvidia/nemotron-3.5-super-vl-120b-a12b", "prices": {"in": 0.0, "out": 0.0}}
 
 
 class RetryLater(Exception):
@@ -94,11 +93,11 @@ def hint_for(e: BaseException) -> str | None:
     if e.status == 401:
         return "Check ARGENTIC_API_KEY. A key only works on the API it was made for, so if you set ARGENTIC_BASE_URL, make the key in that dashboard."
     if code == "model_key_rejected":
-        return "Your model provider refused MODEL_KEY. Check it is a key for the provider in the error (a free NVIDIA key starts with nvapi-)."
+        return "Your model provider refused MODEL_KEY. Check it is a key for the provider in the error."
     if code == "bad_embed_key":
         return "The API cannot use EMBED_KEY as sent: EMBED_PROVIDER is cohere (the default) or bedrock, EMBED_REGION goes with bedrock only, and the key has no spaces. Unset EMBED_KEY to recall by words alone."
     if code == "bad_model":
-        return "Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves, or unset it for the free default."
+        return "Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves."
     if e.status == 402:
         return "This account hit its usage limit. Argentic is free in beta, so there is nothing to buy: email hi@getargentic.com and we will raise it."
     if e.status == 429:
@@ -126,12 +125,18 @@ class WakeResponse:
 
 
 def model_from_env(env: Mapping[str, str] | None = None) -> ModelSpec:
-    """Model preset from ARGENTIC_MODEL_* variables. With ARGENTIC_MODEL_ID unset, the free default (FREE_MODEL)."""
+    """The model from ARGENTIC_MODEL_ID plus ARGENTIC_MODEL_PROVIDER (a named endpoint) or
+    ARGENTIC_MODEL_BASE_URL (any public https OpenAI-compatible endpoint), and the prices. With
+    There is no default model: without ARGENTIC_MODEL_ID and one of the two it raises ValueError. ARGENTIC_BASE_URL is Argentic's own API, not the model's."""
     e = os.environ if env is None else env
     if not e.get("ARGENTIC_MODEL_ID"):
-        return {**FREE_MODEL, "prices": dict(FREE_MODEL["prices"])}
+        raise ValueError("Set ARGENTIC_MODEL_ID to the model you want, with ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL.")
+    provider, base_url = e.get("ARGENTIC_MODEL_PROVIDER"), e.get("ARGENTIC_MODEL_BASE_URL")
+    if bool(provider) == bool(base_url):
+        raise ValueError("Set exactly one of ARGENTIC_MODEL_PROVIDER (a named endpoint) and ARGENTIC_MODEL_BASE_URL (a public https OpenAI-compatible endpoint).")
+    where = {"base_url": base_url} if base_url else {"provider": provider}
     return {
-        "provider": e.get("ARGENTIC_MODEL_PROVIDER", FREE_MODEL["provider"]),
+        **where,
         "id": e["ARGENTIC_MODEL_ID"],
         "prices": {
             "in": float(e.get("ARGENTIC_PRICE_IN", "0")),
@@ -556,7 +561,7 @@ def run(
     ledger_path: str | None = None,
     fire_due: bool = False,
     schedule: bool = False,
-    model: Mapping[str, Any] | None = None,
+    model: Mapping[str, Any],
     system: str | None = None,
     max_steps: int = 8,
     limits: Mapping[str, Any] | None = None,
@@ -578,7 +583,7 @@ def run(
     agent may put a time on a plan; send it on every run of that agent. `ledger_path` is where finished actions are
     kept across a restart; leave it out and they are kept in memory for this call only, so make handlers safe to repeat.
 
-    `model` defaults to FREE_MODEL. Hooks: `on_wake_start(step)` just before each wake is sent (the first answer can
+    `model` is required: name yours (`{"provider": ...}` or `{"base_url": ...}`, `id`, `prices`); there is no default. Hooks: `on_wake_start(step)` just before each wake is sent (the first answer can
     take several seconds), `on_wake(step, wake_id, status, replayed)` after each answer, where `replayed` means the
     API sent back its stored answer or the ledger kept a stopped one, and `on_action(seq, tool, result, fresh)` for
     every action, `fresh` being False for one the ledger says already finished, which is not run again.
@@ -616,7 +621,7 @@ def run(
             resp = WakeResponse(**{**kept, "replayed": True})
         else:
             resp = client.wake(
-                agent, None if (fire_due and step == 0) else message, model=model or FREE_MODEL, idempotency_key=key,
+                agent, None if (fire_due and step == 0) else message, model=model, idempotency_key=key,
                 system=system, tools=declared, limits=limits, fire_due=fire_due and step == 0, schedule=schedule,
                 results=[{"seq": p["seq"], "result": p["result"]} for p in previous] if structured_results and step > 0 and previous else None,
             )

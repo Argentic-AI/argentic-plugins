@@ -132,7 +132,7 @@ A repeat of an `Idempotency-Key` the sink has already seen counts as one effect,
 Give the tool the model API with `--upstream`, and have your agent send its model calls to `$CRASHTEST_UPSTREAM_MODEL_URL` instead of the provider (the name you chose, in capitals):
 
 ```
-MODEL_KEY=... node crash-test.mjs --upstream model=https://integrate.api.nvidia.com/v1 --upstream-rpm 10 -- node examples/llm-agent.mjs
+MODEL_KEY=... AGENT_MODEL_ID=<your model id> node crash-test.mjs --upstream model=https://integrate.api.nvidia.com/v1 --upstream-rpm 10 -- node examples/llm-agent.mjs
 ```
 
 The tool forwards each call untouched, counts it, and adds two kill points per call: `after reply` (the reply reaches the agent, then SIGKILL, so the tool call it asked for never happens) and `reply lost` (the provider answered, the agent never heard). Upstream calls are not effects and are not counted as duplicates. `--upstream-rpm` caps requests per minute across the whole run, which matters on a shared free key. Replies are buffered, so streaming responses do not pass. Any HTTP service works, not only models: point an agent that talks to an orchestration API at it the same way.

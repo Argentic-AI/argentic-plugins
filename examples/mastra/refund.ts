@@ -4,7 +4,7 @@ import { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync } from 
 import { pathToFileURL } from 'node:url'
 import { createTool } from '@mastra/core/tools'
 import { z } from 'zod'
-import { Argentic, freeModel, hintFor, run, type ModelSpec } from '../../adapters/typescript/argentic.ts'
+import { Argentic, hintFor, modelFromEnv, run } from '../../adapters/typescript/argentic.ts'
 import { fromMastraTools } from '../../adapters/typescript/mastra.ts'
 
 export const system =
@@ -63,16 +63,6 @@ export function outboxCounts(outbox: string): Record<string, number> {
     if (line) counts[JSON.parse(line).tool] = (counts[JSON.parse(line).tool] ?? 0) + 1
   }
   return counts
-}
-
-function modelFromEnv(): ModelSpec {
-  const e = process.env
-  if (!e.ARGENTIC_MODEL_ID) return freeModel
-  return {
-    provider: e.ARGENTIC_MODEL_PROVIDER ?? freeModel.provider,
-    id: e.ARGENTIC_MODEL_ID,
-    prices: { in: Number(e.ARGENTIC_PRICE_IN ?? 0), out: Number(e.ARGENTIC_PRICE_OUT ?? 0) },
-  }
 }
 
 async function main() {

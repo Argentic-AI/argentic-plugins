@@ -54,7 +54,8 @@ class StructuredResultsTest(unittest.TestCase):
 
     def run_it(self, ledger="ledger.json", **kw):
         return run(self.client, agent=kw.pop("agent", "a1"), run_id=kw.pop("run_id", "r"), task="go", tools=self.tools(),
-                           ledger_path=os.path.join(self.tmp.name, ledger), log=lambda s: None, **kw)
+                           ledger_path=os.path.join(self.tmp.name, ledger), log=lambda s: None,
+                   model={"provider": "p", "id": "m", "prices": {"in": 0.0, "out": 0.0}}, **kw)
 
     def test_a_follow_up_wake_carries_results_and_no_message(self):
         server = self.start(refund_handler())

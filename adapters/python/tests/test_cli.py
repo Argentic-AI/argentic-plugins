@@ -26,11 +26,17 @@ class DemoTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.env = {**os.environ, "PYTHONPATH": PKG, "ARGENTIC_API_KEY": "aek_test", "MODEL_KEY": "mk_test",
                     "ARGENTIC_BASE_URL": self.server.url, "ARGENTIC_DEMO_WORK_MS": "0", "NO_COLOR": "1"}
-        self.env.pop("ARGENTIC_MODEL_ID", None)
+        self.env.update({"ARGENTIC_MODEL_ID": "m", "ARGENTIC_MODEL_PROVIDER": "p"})
 
     def demo(self, *args, env=None):
         return subprocess.run([sys.executable, "-m", "argentic_ai", "demo", *args], cwd=self.tmp.name, env=env or self.env,
                               capture_output=True, text=True, timeout=60)
+
+    def test_no_model_is_refused_before_anything_runs(self):
+        env = {k: v for k, v in self.env.items() if not k.startswith("ARGENTIC_MODEL_")}
+        r = self.demo(env=env)
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn("ARGENTIC_MODEL_ID", r.stderr)
 
     def outbox(self):
         with open(os.path.join(self.tmp.name, ".argentic-demo", "outbox.jsonl")) as f:

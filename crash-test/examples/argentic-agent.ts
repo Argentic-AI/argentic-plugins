@@ -3,7 +3,7 @@
 //   ARGENTIC_API_KEY  an Argentic API key        MODEL_KEY  your model provider's key      ARGENTIC_BASE_URL  the API (default: production)
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { Argentic, freeModel, run, type Tool, type ModelSpec } from '../../adapters/typescript/argentic.ts'
+import { Argentic, modelFromEnv, run, type Tool, type ModelSpec } from '../../adapters/typescript/argentic.ts'
 
 const sink = process.env.CRASHTEST_SINK_URL
 const stateDir = process.env.CRASHTEST_STATE_DIR
@@ -68,9 +68,7 @@ if (!existsSync(statePath)) {
 const { agent, runId } = JSON.parse(readFileSync(statePath, 'utf8')) as { agent: string; runId: string }
 
 const e = process.env
-const model: ModelSpec = e.ARGENTIC_MODEL_ID
-  ? { provider: e.ARGENTIC_MODEL_PROVIDER ?? freeModel.provider, id: e.ARGENTIC_MODEL_ID, prices: { in: Number(e.ARGENTIC_PRICE_IN ?? 0), out: Number(e.ARGENTIC_PRICE_OUT ?? 0) } }
-  : freeModel
+const model: ModelSpec = modelFromEnv(e)
 
 const out = await run({
   client: new Argentic({ apiKey, modelKey, baseUrl: process.env.CRASHTEST_UPSTREAM_ARGENTIC_URL }),

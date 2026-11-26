@@ -14,7 +14,7 @@ cd argentic-plugins/examples/langchain
 ## 1. Get two keys
 
 - Argentic API key: https://getargentic.com/platform
-- A free NVIDIA NIM key: build.nvidia.com
+- A key for your model provider, and the model you want (see the model variables below)
 
 ## 2. Set up
 
@@ -22,7 +22,10 @@ bash / zsh:
 
 ```bash
 export ARGENTIC_API_KEY=aek_...
-export MODEL_KEY=nvapi-...
+export MODEL_KEY=...                       # your provider's key
+export ARGENTIC_MODEL_PROVIDER=openai       # or ARGENTIC_MODEL_BASE_URL=https://... (any OpenAI-compatible endpoint)
+export ARGENTIC_MODEL_ID=...
+export ARGENTIC_PRICE_IN=0.25 ARGENTIC_PRICE_OUT=2  # dollars per million tokens
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -31,7 +34,11 @@ fish:
 
 ```fish
 set -x ARGENTIC_API_KEY aek_...
-set -x MODEL_KEY nvapi-...
+set -x MODEL_KEY ...
+set -x ARGENTIC_MODEL_PROVIDER openai
+set -x ARGENTIC_MODEL_ID ...
+set -x ARGENTIC_PRICE_IN 0.25
+set -x ARGENTIC_PRICE_OUT 2
 python3 -m venv .venv; and source .venv/bin/activate.fish
 pip install -r requirements.txt
 ```

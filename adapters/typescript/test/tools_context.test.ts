@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { Argentic, freeModel, type ToolDecl, type WakeBody } from '../argentic.ts'
+import { Argentic, type ToolDecl, type WakeBody } from '../argentic.ts'
 import { httpMock } from './mocks.ts'
 
 const tool: ToolDecl = {
@@ -47,7 +47,7 @@ test('context and tool_choice go out on the wake body as typed', async () => {
   })
   try {
     const client = new Argentic({ apiKey: 'aek_test', baseUrl: m.url })
-    const body: WakeBody = { message: 'hi', model: freeModel, context: 'Plan: pro', tools: [tool], tool_choice: { type: 'tool', name: 'book_slot' } }
+    const body: WakeBody = { message: 'hi', model: { provider: 'p', id: 'm', prices: { in: 0, out: 0 } }, context: 'Plan: pro', tools: [tool], tool_choice: { type: 'tool', name: 'book_slot' } }
     await client.wake('a', body, 'k1')
     const sent = JSON.parse(m.requests[0]!.body)
     assert.equal(sent.context, 'Plan: pro')

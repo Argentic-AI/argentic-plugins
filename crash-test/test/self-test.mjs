@@ -54,8 +54,8 @@ const cases = [
     ? [{ name: 'a plain Python agent is caught too (any language works)', cmd: ['python3', ex('python-agent.py')], exit: 1, text: /POST \/refund_order landed 2×/ }]
     : []),
   { name: 'report has a by-action table', cmd: ['node', ex('plain-agent.mjs')], exit: 1, text: /By action\n\s+Action\s+Clean run\s+Worst\s+Repeated in\s+Verdict\n\s+POST \/refund_order\s+1×\s+2×\s+6 of 6\s+REPEATED/ },
-  { name: 'kill between a model reply and its tool call: a plain LLM loop repeats the refund', cmd: ['node', ex('llm-agent.mjs')], args: ['--upstream', `model=${model.url}`, '--when', 'upstream'], exit: 1, text: /after reply.*POST \/refund_order landed 2×/ },
-  { name: 'kill between a model reply and its tool call: a keyed LLM loop is clean', cmd: ['node', ex('llm-agent.mjs')], args: ['--upstream', `model=${model.url}`, '--when', 'upstream,upstream-mid'], env: { LLM_KEYED: '1' }, exit: 0, text: /duplicated effect: .*0/ },
+  { name: 'kill between a model reply and its tool call: a plain LLM loop repeats the refund', cmd: ['node', ex('llm-agent.mjs')], args: ['--upstream', `model=${model.url}`, '--when', 'upstream'], env: { AGENT_MODEL_ID: 'scripted' }, exit: 1, text: /after reply.*POST \/refund_order landed 2×/ },
+  { name: 'kill between a model reply and its tool call: a keyed LLM loop is clean', cmd: ['node', ex('llm-agent.mjs')], args: ['--upstream', `model=${model.url}`, '--when', 'upstream,upstream-mid'], env: { LLM_KEYED: '1', AGENT_MODEL_ID: 'scripted' }, exit: 0, text: /duplicated effect: .*0/ },
 ]
 
 const run = (c) =>

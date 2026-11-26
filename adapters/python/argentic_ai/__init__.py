@@ -6,7 +6,6 @@ Retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and HTTP: `argentic_ai.
 """
 from .core import (
     DEFAULT_BASE_URL,
-    FREE_MODEL,
     Action,
     Argentic,
     ArgenticError,
@@ -27,7 +26,7 @@ from .core import (
 )
 
 __all__ = [
-    "Action", "Argentic", "ArgenticError", "DEFAULT_BASE_URL", "FREE_MODEL", "Ledger", "ModelSpec", "RetryLater", "RunResult",
+    "Action", "Argentic", "ArgenticError", "DEFAULT_BASE_URL", "Ledger", "ModelSpec", "RetryLater", "RunResult",
     "Tool", "ToolContext", "WakeResponse", "__version__", "hint_for", "model_from_env",
     "run", "run_durable", "summarize_replay", "to_argentic_schema",
 ]

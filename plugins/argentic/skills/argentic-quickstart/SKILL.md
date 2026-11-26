@@ -44,12 +44,12 @@ Rules:
    TypeScript:
 
    ```ts
-   import { Argentic, freeModel } from '@argentic-ai/client'
+   import { Argentic, modelFromEnv } from '@argentic-ai/client'
 
    const client = new Argentic() // reads ARGENTIC_API_KEY and MODEL_KEY
    const res = await client.wake(
      'quickstart-check',
-     { message: 'Say hello in one short sentence.', model: freeModel, limits: { max_usd: 0.05 } },
+     { message: 'Say hello in one short sentence.', model: modelFromEnv(), limits: { max_usd: 0.05 } },
      'quickstart-check-1', // idempotency key
    )
    console.log(res.status, res.reply, res.spent_usd)
@@ -69,7 +69,7 @@ Rules:
    print(res.status, res.reply, res.spent_usd)
    ```
 
-   `freeModel` and `model_from_env()` use a free NVIDIA model. For a first run that shows the engine as it runs in production, use Anthropic `claude-haiku-5-5` with an `sk-ant-` key instead: the engine's prompt-cache breakpoints exist only for the `anthropic` provider, and other providers rely on their own caching. For another model, set `ARGENTIC_MODEL_PROVIDER`, `ARGENTIC_MODEL_ID`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` (dollars per million tokens), as the examples README describes. Prices matter: the spend limit counts with them.
+   There is no default model. `model_from_env()` (`modelFromEnv()` in TypeScript) reads `ARGENTIC_MODEL_ID` plus `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, and the prices, and fails if the user has not named one: ask which model they use. For a first run that shows the engine as it runs in production, use Anthropic `claude-haiku-5-5` with an `sk-ant-` key instead: the engine's prompt-cache breakpoints exist only for the `anthropic` provider, and other providers rely on their own caching. `ARGENTIC_MODEL_PROVIDER` is a named endpoint; `ARGENTIC_MODEL_BASE_URL` is any public https OpenAI-compatible endpoint (give one, not both), with `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT` in dollars per million tokens. Prices matter: the spend limit counts with them.
 
    Neither client loads `.env` itself. Run the script with the user's usual way of loading it (`node --env-file=.env`, `python-dotenv`, or the shell).
 6. If the user already has tools, wire them with `run` (TypeScript or Python) and the adapter from the table, as the example does. Call it from wherever the app gets an event (a webhook, a queue, a cron job): `task` is only the new event, `runId` / `run_id` is that event's id, and `tools` are the user's own functions, run in their code with their auth. If the agent should be woken later, pass `schedule: true` / `schedule=True`, keep the result's `wakeAt` / `wake_at` in the app's own scheduler, and wake the agent then with `fireDue: true` / `fire_due=True` in place of `task`. Argentic keeps no clock. An agent that needs a person to say yes just stops: the tool asks the person in the app and returns that it is waiting, and the app's next wake carries the answer.
