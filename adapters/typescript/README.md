@@ -63,14 +63,18 @@ You always name the model; there is no default. `model` is `{ provider, id, pric
 
 A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one. Set it on a `Tool` directly, or pass `{ oncePer: { refund_order: 'refund:{order_id}' } }` as the second argument to `fromAiSdkTools` or `fromMastraTools`. The template is checked before the request is sent. See [TOOLS.md](TOOLS.md#declaring-a-tool-once_per). 0.1.6 and earlier dropped the field.
 
-## Tools, context and deferred loading (0.1.10)
+## Tools, state and deferred loading (0.1.10)
 
-Declare an agent's tools once with `client.putTools(agent, tools)` and leave `tools` out of later wakes; `client.tools(agent)` reads them back. A wake can also carry `context` (facts for that call only, such as the signed-in user's plan; it is not written to the journal) and `tool_choice` (`'auto'`, `'required'` or `{ type: 'tool', name }`). On a tool, `defer_loading: true` keeps its schema out of the prompt until the agent looks it up, which pays off from about ten tools.
+Declare an agent's tools once with `client.putTools(agent, tools)` and leave `tools` out of later wakes; `client.tools(agent)` reads them back. A wake can also carry `state` (keys and JSON values your app holds, such as the signed-in user's plan; a value the agent already has costs nothing to send again, a changed one is journaled and the agent keeps it, and `null` removes a key) and `tool_choice` (`'auto'`, `'required'` or `{ type: 'tool', name }`). On a tool, `defer_loading: true` keeps its schema out of the prompt until the agent looks it up, which pays off from about ten tools.
 
 ```ts
 await client.putTools('support-bot', [{ name: 'book_slot', description: 'Book a slot.', parameters: { type: 'object', properties: { day: { type: 'string' } }, required: ['day'] } }])
-const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: modelFromEnv(), context: 'Plan: pro' }, 'book-1')
+const out = await client.wake('support-bot', { message: 'Book Tuesday.', model: modelFromEnv(), state: { 'account.plan': 'Pro' } }, 'book-1')
 ```
+
+## `state` replaces `context` (0.10.0)
+
+`context` is gone from `WakeBody`: the API now answers 400 and names `state` when a wake still sends it. Move what you sent as one string into keys (`context: 'Plan: pro'` becomes `state: { 'account.plan': 'Pro' }`) and send them on every wake, or only when they change; an unchanged key costs nothing. Unlike `context`, a value you send is journaled, so the agent still has it on later wakes and can find it by search. Text that came from outside your app (a web page, an email) goes in `outside`, not `state`.
 
 ## Structured tool results (0.1.11)
 

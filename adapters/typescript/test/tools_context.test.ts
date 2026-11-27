@@ -35,7 +35,7 @@ test('putTools sends the declarations with PUT and returns what was stored', asy
   }
 })
 
-test('context and tool_choice go out on the wake body as typed', async () => {
+test('state and tool_choice go out on the wake body as typed', async () => {
   const m = await httpMock({ honorsKey: false })
   m.server.removeAllListeners('request')
   m.server.on('request', async (r, res) => {
@@ -47,10 +47,11 @@ test('context and tool_choice go out on the wake body as typed', async () => {
   })
   try {
     const client = new Argentic({ apiKey: 'aek_test', baseUrl: m.url })
-    const body: WakeBody = { message: 'hi', model: { provider: 'p', id: 'm', prices: { in: 0, out: 0 } }, context: 'Plan: pro', tools: [tool], tool_choice: { type: 'tool', name: 'book_slot' } }
+    const body: WakeBody = { message: 'hi', model: { provider: 'p', id: 'm', prices: { in: 0, out: 0 } }, state: { 'account.plan': 'Pro', 'cart.items': 3, 'account.trial': null }, tools: [tool], tool_choice: { type: 'tool', name: 'book_slot' } }
     await client.wake('a', body, 'k1')
     const sent = JSON.parse(m.requests[0]!.body)
-    assert.equal(sent.context, 'Plan: pro')
+    assert.deepEqual(sent.state, { 'account.plan': 'Pro', 'cart.items': 3, 'account.trial': null })
+    assert.equal('context' in sent, false)
     assert.deepEqual(sent.tool_choice, { type: 'tool', name: 'book_slot' })
     assert.equal(sent.tools[0].defer_loading, true)
   } finally {

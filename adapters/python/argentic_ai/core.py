@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Mapping, TypedDict
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 DEFAULT_BASE_URL = "https://api.getargentic.com"
 BACKOFF = (1, 2, 4, 8)  # waits between the 5 tries on 5xx or network errors
@@ -308,14 +308,14 @@ class Argentic:
         fire_due: bool = False,
         schedule: bool = False,
         memory: str | None = None,
-        context: str | None = None,
+        state: Mapping[str, Any] | None = None,
         tool_choice: str | Mapping[str, Any] | None = None,
         results: list[Mapping[str, Any]] | None = None,
     ) -> WakeResponse:
         """Wake an agent with a message, or with `fire_due=True` and no message for the plans that have fallen due (the
         API refuses both together). Every answer carries `wake_at` (`WakeResponse.wake_at`): when the agent next wants
         waking, or None. Argentic keeps no clock; your scheduler wakes the agent then with `fire_due=True`. `memory`
-        picks one of the agent's memories. `schedule=True` lets the agent put a time on a plan. Safe to call again with the same key: a queued (409) answer waits and resends,
+        picks one of the agent's memories. `state` is a dict of keys and JSON values your app holds (the signed-in user's plan, what is in their cart): an unchanged value costs nothing to send again, a changed one is journaled so the agent keeps it and can search for it, and `None` removes a key. It replaces `context`, which the API no longer takes. `schedule=True` lets the agent put a time on a plan. Safe to call again with the same key: a queued (409) answer waits and resends,
         a 5xx or network error retries with backoff, and a reused key with a different body raises.
 
         `results` is what your app's tools returned for the `actions` of the previous wake, as `{"seq": n, "result": ...}`
@@ -335,8 +335,8 @@ class Argentic:
             body["memory"] = memory
         if system:
             body["system"] = system
-        if context:
-            body["context"] = context  # facts for this call only; not written to the journal or memory
+        if state:
+            body["state"] = dict(state)  # keys and JSON values your app holds; a changed one is journaled, an unchanged one costs nothing, None removes a key
         if tools:
             body["tools"] = tools
         if tool_choice is not None:
