@@ -11,25 +11,23 @@ Full reference: https://getargentic.com/docs
 
 ## The MCP tools
 
-One MCP, `argentic`, signed in with the user's Argentic account and an organization. It has account tools (`get_account`, `list_api_keys`, `create_api_key`, `revoke_api_key`, `get_usage`, `set_budget`) and these agent tools, which map one to one onto the REST routes:
+One MCP, `argentic`, signed in with the user's Argentic account and an organization. It has account tools (`get_account`, `list_api_keys`, `create_api_key`, `revoke_api_key`, `get_usage`, `set_budget`) and these read-only agent tools, which map one to one onto the REST routes. The MCP cannot wake an agent or run a model: the user's app does that over the REST API (`POST /v1/agents/{agent}/wake`):
 
 | tool | what it does | spends money |
 |---|---|---|
-| `argentic_wake` | message an agent, get its reply | yes |
-| `argentic_resume` | finish a wake that was cut off or stopped on a cap | yes |
 | `argentic_agents` | list your agents, with open and cut-off counts (where available) | no |
 | `argentic_wakes`, `argentic_wake_get` | find wakes that never answered, read one wake | no |
 | `argentic_replay` | check a run's proof: the journal still reproduces what the model was shown | no |
 
 Three more skills: `argentic-quickstart` adds Argentic to a project, `argentic-status` shows what your agents did, `argentic-fix` finds why a run stopped.
 
-Account questions (usage, budget, API keys) use the account tools. Without the MCP, call `POST /v1/agents/{agent}/wake` and the other routes directly with `Authorization: Bearer aek_...` (an API key from `create_api_key` or the dashboard) and, for wakes, `X-Model-Key: <provider key>`.
+Account questions (usage, budget, API keys) use the account tools. To run an agent, the user's app calls `POST /v1/agents/{agent}/wake` and the other routes directly with `Authorization: Bearer aek_...` (an API key from `create_api_key` or the dashboard) and, for wakes, `X-Model-Key: <provider key>`.
 
 ## Rules that matter
 
 - The agent id is the memory. The same id keeps the same memory, and different ids never see each other. One id per end user, project or task is the usual shape. Ids are 1 to 64 letters, digits, `-` or `_`.
 - Every wake costs real money on the user's model key. Pass `model.prices` (dollars per million tokens) so the spend limits count correctly, and keep `max_usd` small while testing. Each call carries roughly 2,500 to 5,000 prompt tokens of engine overhead, so one-word test calls are not free.
-- The model key never goes in a tool argument or a message. It travels in the `X-Model-Key` header of the connection, and only wake tools (`argentic_wake`, `argentic_resume`) need it. If a wake says `model_key_required`, tell the user to add it to the connection or plugin settings.
+- The model key never goes in a message or a tool argument, and never through the MCP, which carries none. It travels in the `X-Model-Key` header of the app's own wake call. If a wake says `model_key_required`, the app is not sending it.
 - An agent runs one call at a time. A second call while it is running returns `status: "queued"` (HTTP 409 on REST) with `retry_after` seconds. Wait that long and send it again.
 - The agent decides what to remember. It records with built-in tools (`decide`, `supersede`, `plan`, `plan_close`, `recall` and a few more; they show up in `tool_calls.names`). To see what it kept, open the agent in the dashboard (Runs) or read `GET /v1/agents/{agent}/memory`; the MCP no longer has a memory tool. Do not assume a fact was stored because you said it.
 
@@ -49,15 +47,15 @@ The loop: wake, read `actions`, do them, wake again with what happened.
 
 ## Send only what is new
 
-Argentic keeps the agent's history. Each `argentic_wake` carries only what happened since the last one: the user's new message, or what your tools returned. Do not paste earlier messages or the agent's replies back in, and do not send a transcript. The agent already has them, and every copy lands in its journal a second time. A call that repeats an earlier message or reply is refused with `history_resent` before anything runs, and costs nothing. If you see it, send the new event alone.
+Argentic keeps the agent's history. Each wake call carries only what happened since the last one: the user's new message, or what your tools returned. Do not paste earlier messages or the agent's replies back in, and do not send a transcript. The agent already has them, and every copy lands in its journal a second time. A call that repeats an earlier message or reply is refused with `history_resent` before anything runs, and costs nothing. If you see it, send the new event alone.
 
 ## When a call does not answer
 
 Every wake is recorded before it runs. If a wake times out, the connection drops or it stops on a cap:
 
-1. Retry safely by sending the same `idempotency_key` with `argentic_wake`. The retry does not add the message twice, and repeats the stored answer if the wake finished.
+1. Retry safely by sending the same `idempotency_key` on the wake call. The retry does not add the message twice, and repeats the stored answer if the wake finished.
 2. Or look: `argentic_wakes` with `state: "open"` lists wakes that are not done (`interrupted` means the process died).
-3. `argentic_resume` continues the latest open wake without adding its message again. It needs the model key again. Anything you send, such as a higher `max_usd`, replaces what the wake had.
+3. `POST /v1/agents/{agent}/resume` (from the app, not the MCP) continues the latest open wake without adding its message again. It needs the model key again. Anything you send, such as a higher `max_usd`, replaces what the wake had.
 
 What resume does: a tool call that already finished is not run again. A tool call that was cut off is requested again once, so if your side effects matter, de-duplicate on the action's `seq`. A model call that was lost is asked again and charged at its estimate. If another run still holds the agent you get `queued`; a run that died holds it for up to two minutes.
 

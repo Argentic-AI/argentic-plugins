@@ -8,7 +8,7 @@
     {
       "name": "argentic",
       "source": "plugins/argentic",
-      "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to wake agents and manage your account."
+      "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to inspect your agents' runs and manage your account."
     }
   ]
 }

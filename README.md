@@ -6,7 +6,7 @@ If your agent runs out of context and gets worse after many tokens, that is the 
 
 This repo holds only manifests, skills, MCP settings and small client adapters. The engine is not in it.
 
-Start with the [prompt below](#ask-your-agent-to-do-it): your assistant integrates your app first. The connector comes after, as an optional dev tool. There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. To wake an agent you also need your own key for a model provider; it travels in the `X-Model-Key` header on each request and Argentic never stores it.
+Start with the [prompt below](#ask-your-agent-to-do-it): your assistant integrates your app first. The connector comes after, as an optional dev tool. There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. The MCP only reads (runs, steps, proof, usage) and manages keys and budget. It cannot wake an agent or run a model: your own app wakes your agents.
 
 ## Try it
 
@@ -27,19 +27,19 @@ claude plugin marketplace add Argentic-AI/argentic-plugins
 claude plugin install argentic@argentic
 ```
 
-Claude Code asks for your model key (optional, only needed to wake agents) and stores it securely. Then run `/mcp` and sign in to `argentic`.
+Then run `/mcp` and sign in to `argentic`.
 
 MCP only, no plugin:
 
 ```
-claude mcp add --transport http --header "X-Model-Key: $MODEL_KEY" argentic https://getargentic.com/mcp
+claude mcp add --transport http argentic https://getargentic.com/mcp
 ```
 
 Then run `/mcp` to sign in.
 
 ## claude.ai and Claude Projects
 
-Customize, Connectors, Add custom connector, URL `https://getargentic.com/mcp`. Under Request headers add `x-api-key` with your model key (only needed to wake agents). Claude only sends header names Anthropic has approved, and `X-Model-Key` is not one, so use `x-api-key`: Argentic reads it as the model key. Request headers is a beta that not every account has yet; if you don't see it, the connector still signs in and reads, and you wake agents from Claude Code or Codex. Sign in and pick your organization. Disconnect any time in your Argentic settings.
+Customize, Connectors, Add custom connector, URL `https://getargentic.com/mcp`. Sign in and pick your organization. Disconnect any time in your Argentic settings.
 
 For the skills: Customize, Plugins, the + next to Personal plugins, Add marketplace, From a repository, `Argentic-AI/argentic-plugins`.
 
@@ -64,10 +64,9 @@ That adds the skills. Add the MCP to `~/.codex/config.toml`:
 ```
 [mcp_servers.argentic]
 url = "https://getargentic.com/mcp"
-env_http_headers = { "X-Model-Key" = "MODEL_KEY" }
 ```
 
-Export `MODEL_KEY` where Codex starts, then sign in with `codex mcp login argentic`.
+Sign in with `codex mcp login argentic`.
 
 ## Also: crash-test any agent (5 minutes)
 
@@ -75,7 +74,7 @@ Export `MODEL_KEY` where Codex starts, then sign in with `codex mcp login argent
 
 ## Without the MCP
 
-The HTTP API still works on its own: `POST /v1/agents/{agent}/wake` and the other routes take an API key (`aek_...`, created by the `create_api_key` tool or in the dashboard) as `Authorization: Bearer`, plus `X-Model-Key` to wake. See the [docs](https://getargentic.com/docs).
+The HTTP API still works on its own: `POST /v1/agents/{agent}/wake` and the other routes take an API key (`aek_...`, created by the `create_api_key` tool or in the dashboard) as `Authorization: Bearer`, plus `X-Model-Key` to wake. Your app makes that call, never the MCP. See the [docs](https://getargentic.com/docs).
 
 ## Bring your tools
 
@@ -104,7 +103,7 @@ When that works, ask whether I also want the Argentic connector installed in thi
 - `argentic-fix` skill: find why a run stopped, then resume it or ask you before raising a limit.
 - `argentic` MCP server, signed in with your Argentic account.
   - Account tools: `get_account`, `list_api_keys`, `create_api_key`, `revoke_api_key`, `get_usage`, `set_budget`.
-  - Agent tools: `argentic_wake`, `argentic_resume`, `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_agents`.
+  - Agent tools, read only: `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_agents`.
   - `set_budget` needs an owner or admin. Other tools work as far as your role allows.
 
 MIT licensed.

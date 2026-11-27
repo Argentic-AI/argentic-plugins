@@ -2,10 +2,7 @@
   "mcpServers": {
     "argentic": {
       "type": "http",
-      "url": "https://getargentic.com/mcp",
-      "headers": {
-        "X-Model-Key": "${user_config.model_key}"
-      }
+      "url": "https://getargentic.com/mcp"
     }
   }
 }

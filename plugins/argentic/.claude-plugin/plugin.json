@@ -1,8 +1,8 @@
 {
   "name": "argentic",
   "displayName": "Argentic",
-  "version": "0.3.1",
-  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP that signs in with your Argentic account, so your coding agent can wake agents and manage usage and budget.",
+  "version": "0.3.2",
+  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP that signs in with your Argentic account, so your coding agent can inspect your agents' runs and manage usage and budget.",
   "author": {
     "name": "Argentic",
     "url": "https://getargentic.com"
@@ -15,14 +15,5 @@
     "memory",
     "mcp",
     "argentic"
-  ],
-  "userConfig": {
-    "model_key": {
-      "type": "string",
-      "title": "Model provider key",
-      "description": "Your own key for the model provider your agents run on (OpenRouter, OpenAI, and so on). Sent with each wake, never stored by Argentic. Needed only for tools that wake an agent.",
-      "required": false,
-      "sensitive": true
-    }
-  }
+  ]
 }

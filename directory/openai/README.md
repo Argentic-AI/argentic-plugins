@@ -4,7 +4,7 @@ The public ChatGPT and Codex directory takes a ZIP with a root `plugin.json` and
 
 Differences from the Claude Code plugin, on purpose:
 
-- No `headers`. The public portal rejects them, so the `X-Model-Key` header is left out and waking an agent from this listing needs another way to give it a model key. Read and account tools work.
+- No `headers`. The public portal rejects them, and the MCP needs none: it only reads runs and manages the account, and never wakes an agent.
 - Sign-in uses a Client ID Metadata Document (`cimd`), which the Argentic auth server supports. It has no dynamic client registration endpoint.
 - No hooks and no app references, which the portal refuses.
 
