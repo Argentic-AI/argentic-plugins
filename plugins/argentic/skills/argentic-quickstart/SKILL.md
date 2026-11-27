@@ -37,7 +37,7 @@ Rules:
    | OpenAI Agents SDK | `argentic_ai.openai_agents` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/openai-agents |
    | Pydantic AI | `argentic_ai.pydantic_ai` | https://github.com/Argentic-AI/argentic-plugins/tree/main/examples/pydantic-ai |
 
-   The TypeScript client needs Node 22 or newer. The Python client needs 3.10 or newer. The Python package may not be on PyPI yet. If `pip install argentic-ai` fails, use `pip install "argentic-ai @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"`.
+   The TypeScript client needs Node 22 or newer. The Python client needs 3.10 or newer. The Python package is not on PyPI, so `pip install argentic-ai` fails. Install it from GitHub: `pip install "argentic-ai @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"`.
 4. Install the client. Use the project's own package manager.
 5. Write the smallest working call. Do not invent names: read the client source for the exact ones. It is in this repo under `adapters/typescript/argentic.ts` and `adapters/python/argentic_ai/core.py`. The names as of client 0.4.0:
 

@@ -13,7 +13,8 @@ Use the `argentic-quickstart` skill. In short:
 
 1. Detect their stack and install the client.
 2. Send Argentic only the new events (a user message, a tool result). Argentic keeps the history and builds each prompt from it, so never resend the transcript.
-3. Put `ARGENTIC_API_KEY` and the model key in `.env`, never in chat or in code. Tell the user where each goes and let them add it. Prefer an Anthropic model key: prompt caching is built for Anthropic models.
+3. Put `ARGENTIC_API_KEY` and the model key (`MODEL_KEY`) in `.env`, never in chat or in code. Tell the user where each goes and let them add it. Prefer an Anthropic model key: prompt caching is built for Anthropic models.
+   There is no default model, so name theirs in `.env` too: `ARGENTIC_MODEL_ID`, and `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`. Any model that is not one of Anthropic's own also needs its prices in dollars per million tokens, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`. Ask the user which model; never pick one for them.
 4. Run one small test call with `max_usd` of 0.05 and report `spent_usd`.
 
 ## Step 2: offer the connector
