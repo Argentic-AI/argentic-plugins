@@ -14,7 +14,7 @@ The plugin runs no local code, installs no packages and has no hooks.
 
 Account tools: `get_account`, `get_usage`, `set_budget`, `list_api_keys`, `create_api_key`, `revoke_api_key`.
 
-Run tools, read only: `argentic_wakes` (find runs), `argentic_wake_get` (read one run), `argentic_replay` (check a run's proof), `get_run_links` (the dashboard page and proof link for a run). None of them runs a model or spends on your model account.
+Run tools, read only: `argentic_wakes` (find runs), `argentic_wake_get` (read one run), `argentic_replay` (check a run's proof), `get_run_links` (the dashboard page and proof link for a run, where it is switched on). None of them runs a model or spends on your model account.
 
 `set_budget` needs an owner or admin on the organization. Creating and revoking keys and setting a budget are the only tools that change anything. Reading an agent's journal or memory is in the dashboard and the REST API, not in the MCP.
 

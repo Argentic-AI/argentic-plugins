@@ -103,7 +103,7 @@ When that works, ask whether I also want the Argentic connector installed in thi
 - `argentic-fix` skill: find why a run stopped, then tell you what your app should do (resume it, or raise a limit with your say-so).
 - `argentic` MCP server, signed in with your Argentic account.
   - Account tools: `get_account`, `list_api_keys`, `create_api_key`, `revoke_api_key`, `get_usage`, `set_budget`.
-  - Run tools, read only: `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `get_run_links`. They run no model and spend nothing.
+  - Run tools, read only: `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, and `get_run_links` where it is switched on. They run no model and spend nothing.
   - `set_budget` needs an owner or admin. Other tools work as far as your role allows.
 
 MIT licensed.
