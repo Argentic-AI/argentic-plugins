@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Argentic-AI/argentic",
   "title": "Argentic",
-  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded.",
-  "version": "0.3.4",
+  "description": "Read-only view of your Argentic agents' runs and proof, plus API key, usage and budget tools.",
+  "version": "0.3.5",
   "websiteUrl": "https://getargentic.com",
   "repository": {
     "url": "https://github.com/Argentic-AI/argentic-plugins",

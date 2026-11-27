@@ -1,8 +1,8 @@
 {
   "name": "argentic",
   "displayName": "Argentic",
-  "version": "0.3.2",
-  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP that signs in with your Argentic account, so your coding agent can inspect your agents' runs and manage usage and budget.",
+  "version": "0.3.3",
+  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP that signs in with your Argentic account. It reads your agents' runs and proof and manages API keys, usage and budget. It never wakes an agent or runs a model: your own app does that.",
   "author": {
     "name": "Argentic",
     "url": "https://getargentic.com"

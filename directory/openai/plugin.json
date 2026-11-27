@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "argentic",
-  "version": "0.3.2",
-  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to inspect your agents' runs and manage your account.",
+  "version": "0.3.3",
+  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One read-only MCP server: it reads your agents' runs and proof and manages API keys, usage and budget. It never wakes an agent or runs a model.",
   "author": { "name": "Argentic", "url": "https://getargentic.com" },
   "homepage": "https://getargentic.com/docs",
   "license": "MIT",
