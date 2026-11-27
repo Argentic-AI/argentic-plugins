@@ -129,13 +129,28 @@ class ClientTest(unittest.TestCase):
         self.assertIn("ARGENTIC_MODEL_ID", hint_for(e))
         self.assertEqual(len(server.requests), 1)  # not retried
 
-    def test_the_402_hint_says_the_beta_is_free(self):
-        server = self.serve(lambda *a: (402, {"error": "usage_limit"}, None))
+    def test_the_402_hint_points_at_billing_and_promises_nothing(self):
+        server = self.serve(lambda *a: (402, {"error": "payment_required"}, None))
         with self.assertRaises(ArgenticError) as cm:
             self.wake(self.client(server))
         hint = hint_for(cm.exception)
-        self.assertIn("free in beta", hint)
-        self.assertIn("hi@getargentic.com", hint)
+        self.assertIn("Billing", hint)
+        self.assertNotIn("free in beta", hint)
+
+    def test_a_first_run_mistake_gets_a_hint_that_names_the_fix(self):
+        said = "nvidia answered HTTP 404 for model \"x\": Not Found"
+        cases = [
+            ({"error": "model_key_required"}, "MODEL_KEY"),
+            ({"error": "bad_model", "detail": said}, said),  # the API's own words say which of provider and id is wrong
+            ({"error": "bad_model", "detail": said}, "ARGENTIC_MODEL_PROVIDER"),
+            ({"error": "prices_required", "detail": "no price is known"}, "ARGENTIC_PRICE_IN"),
+            ({"error": "idempotency_key_reused"}, "new run id"),
+            ({"error": "history_resent", "detail": "`message` repeats a reply"}, "only the new event"),
+            ({"error": "bad_request", "detail": ["model.prices.in: Expected number, received string"]}, "Prices are numbers"),
+        ]
+        for body, word in cases:
+            self.assertIn(word, hint_for(ArgenticError("x", 400, body)))
+        self.assertIsNone(hint_for(ArgenticError("x", 400, {"error": "bad_request", "detail": ["message: Required"]})))
 
     def test_hints_for_401_429_and_a_provider_refusing_the_key(self):
         for status, body, word in [(401, {"error": "unauthorized"}, "ARGENTIC_API_KEY"), (429, {"error": "rate_limited"}, "Too many"),

@@ -55,7 +55,7 @@ console.log(out.reply)
 
 ## Your model
 
-You always name the model; there is no default. `model` is `{ provider, id, prices }` with `provider` a named endpoint (`openai`, `anthropic`, `openrouter`, ...), or `{ base_url, id, prices }` with `base_url` any public https OpenAI-compatible endpoint on port 443 (give one of the two, not both). Prices are dollars per million tokens. `modelFromEnv()` reads `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`, and throws if the model is not named. `ARGENTIC_BASE_URL` is Argentic's own API, not your model's.
+You always name the model; there is no default. `model` is `{ provider, id, prices }` with `provider` a named endpoint (`openai`, `anthropic`, `openrouter`, ...), or `{ base_url, id, prices }` with `base_url` any public https OpenAI-compatible endpoint on port 443 (give one of the two, not both). Prices are dollars per million tokens. `modelFromEnv()` reads `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN` and `ARGENTIC_PRICE_OUT`, and throws if the model is not named. A price is never guessed. With neither price variable set, no `prices` are sent: the API uses its own price for a model it has one for (today, Anthropic's models on Anthropic's API) and refuses any other with `prices_required`. One price without the other throws, and so does a price that is not a number. A free model sets both to `0`. This is new in 0.9.0: up to 0.8.0 an unset price counted as 0. `ARGENTIC_BASE_URL` is Argentic's own API, not your model's.
 
 ## Once per operation (`once_per`, 0.1.7)
 

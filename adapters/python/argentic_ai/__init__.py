@@ -17,16 +17,18 @@ from .core import (
     ToolContext,
     WakeResponse,
     __version__,
+    check_once_per,
     hint_for,
     model_from_env,
     run,
     run_durable,
     summarize_replay,
     to_argentic_schema,
+    with_once_per,
 )
 
 __all__ = [
     "Action", "Argentic", "ArgenticError", "DEFAULT_BASE_URL", "Ledger", "ModelSpec", "RetryLater", "RunResult",
-    "Tool", "ToolContext", "WakeResponse", "__version__", "hint_for", "model_from_env",
-    "run", "run_durable", "summarize_replay", "to_argentic_schema",
+    "Tool", "ToolContext", "WakeResponse", "__version__", "check_once_per", "hint_for", "model_from_env",
+    "run", "run_durable", "summarize_replay", "to_argentic_schema", "with_once_per",
 ]

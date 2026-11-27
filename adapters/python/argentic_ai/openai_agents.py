@@ -6,16 +6,17 @@ loop, not `Runner`.
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from agents import FunctionTool
 from agents.tool_context import ToolContext as SdkToolContext
 
-from .core import Tool
+from .core import Tool, with_once_per
 
 
-def from_openai_agents_tools(tools: Iterable[Any]) -> list[Tool]:
-    """Turn @function_tool / FunctionTool objects into run tools (Argentic accepts up to 8)."""
+def from_openai_agents_tools(tools: Iterable[Any], *, once_per: Mapping[str, str] | None = None) -> list[Tool]:
+    """Turn @function_tool / FunctionTool objects into run tools (Argentic accepts up to 8).
+    `once_per` maps a tool name to its once-per-operation key, such as `{"refund_order": "refund:{order_id}"}`."""
     out: list[Tool] = []
     for t in tools:
         if not isinstance(t, FunctionTool):
@@ -27,7 +28,7 @@ def from_openai_agents_tools(tools: Iterable[Any]) -> list[Tool]:
             # bind t as a default so each tool keeps its own handler
             execute=lambda args, ctx, t=t: _invoke(t, args, ctx),
         ))
-    return out
+    return with_once_per(out, once_per)
 
 
 async def _call(t: FunctionTool, args: dict, key: str) -> Any:

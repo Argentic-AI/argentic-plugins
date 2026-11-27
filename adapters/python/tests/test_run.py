@@ -230,11 +230,53 @@ class ModelFromEnvTest(unittest.TestCase):
         env = {"ARGENTIC_MODEL_ID": "gpt-x", "ARGENTIC_MODEL_PROVIDER": "openai", "ARGENTIC_PRICE_IN": "0.25", "ARGENTIC_PRICE_OUT": "2"}
         self.assertEqual(model_from_env(env), {"provider": "openai", "id": "gpt-x", "prices": {"in": 0.25, "out": 2.0}})
         url = {"ARGENTIC_MODEL_ID": "m", "ARGENTIC_MODEL_BASE_URL": "https://llm.example.com/v1"}
-        self.assertEqual(model_from_env(url), {"base_url": "https://llm.example.com/v1", "id": "m", "prices": {"in": 0.0, "out": 0.0}})
+        self.assertEqual(model_from_env({**url, "ARGENTIC_PRICE_IN": "0", "ARGENTIC_PRICE_OUT": "0"}), {"base_url": "https://llm.example.com/v1", "id": "m", "prices": {"in": 0.0, "out": 0.0}})
         with self.assertRaises(ValueError):
             model_from_env({"ARGENTIC_MODEL_ID": "m"})
         with self.assertRaises(ValueError):
             model_from_env({**url, "ARGENTIC_MODEL_PROVIDER": "openai"})
+
+
+    def test_a_price_is_never_guessed(self):
+        named = {"ARGENTIC_MODEL_ID": "m", "ARGENTIC_MODEL_PROVIDER": "openai"}
+        # neither price set: no prices are sent, so the API uses its own price or refuses the call; it is not counted as free
+        self.assertEqual(model_from_env(named), {"provider": "openai", "id": "m"})
+        self.assertEqual(model_from_env({**named, "ARGENTIC_PRICE_IN": " ", "ARGENTIC_PRICE_OUT": ""}), {"provider": "openai", "id": "m"})
+        with self.assertRaisesRegex(ValueError, "ARGENTIC_PRICE_OUT is not set"):
+            model_from_env({**named, "ARGENTIC_PRICE_IN": "0.25"})
+        # the docs' placeholder left in, a negative price, and not-a-number are all refused by name
+        for bad in ("INPUT_USD_PER_MILLION", "-1", "nan", "$0.25"):
+            with self.assertRaisesRegex(ValueError, "ARGENTIC_PRICE_IN must be a number"):
+                model_from_env({**named, "ARGENTIC_PRICE_IN": bad, "ARGENTIC_PRICE_OUT": "2"})
+
+
+class OncePerTest(unittest.TestCase):
+    PARAMS = {"type": "object", "properties": {"order_id": {"type": "string"}, "tags": {"type": "array", "items": {"type": "string"}}}, "required": ["order_id"]}
+
+    def test_a_tool_declares_its_once_per_key_and_a_tool_without_one_sends_no_field(self):
+        from argentic_ai.core import _declare
+        refund = Tool("refund_order", "Refund an order.", self.PARAMS, lambda a, c: None, once_per="refund:{order_id}")
+        self.assertEqual(_declare(refund)["once_per"], "refund:{order_id}")
+        self.assertNotIn("once_per", _declare(Tool("lookup", "Look up.", self.PARAMS, lambda a, c: None)))
+
+    def test_a_template_the_api_would_refuse_fails_before_the_request(self):
+        from argentic_ai import check_once_per
+        for template, word in [("refund", "at least one"), ("refund:{nope}", "property of this tool"), ("refund:{tags}", "property of this tool"),
+                               ("refund:{order_id}:{", "unmatched brace"), ("r", "3 to 120"), ("refund {order_id}", "letters, digits"), (7, "must be a string")]:
+            with self.assertRaisesRegex(ValueError, word):
+                check_once_per("refund_order", template, self.PARAMS)
+        with self.assertRaisesRegex(ValueError, "required property"):
+            check_once_per("refund_order", "refund:{order_id}", {**self.PARAMS, "required": []})
+
+    def test_with_once_per_sets_the_key_by_tool_name(self):
+        from argentic_ai import with_once_per
+        tools = [Tool("refund_order", "Refund.", self.PARAMS, lambda a, c: None), Tool("lookup", "Look up.", self.PARAMS, lambda a, c: None)]
+        out = with_once_per(tools, {"refund_order": "refund:{order_id}"})
+        self.assertEqual([t.once_per for t in out], ["refund:{order_id}", None])
+        self.assertIsNone(tools[0].once_per)  # the caller's tools are not changed
+        self.assertIs(with_once_per(tools, None), tools)
+        with self.assertRaisesRegex(ValueError, "not one of the tools"):
+            with_once_per(tools, {"refund": "refund:{order_id}"})
 
 
 class DeprecatedNameTest(unittest.TestCase):
