@@ -1,4 +1,4 @@
-"""put_tools, get_tools, and the context / tool_choice wake fields, against the in-process server.
+"""put_tools, get_tools, and the state / tool_choice wake fields, against the in-process server.
 
 Run from adapters/python: python -m unittest discover -s tests -v
 """
@@ -31,18 +31,26 @@ class ToolsContextTest(unittest.TestCase):
         self.assertEqual(server.requests[0][0], "/v1/agents/a%20b/tools")
         self.assertEqual(server.requests[0][2], {"tools": [TOOL]})
 
-    def test_wake_sends_context_and_tool_choice(self):
+    def test_wake_sends_state_and_tool_choice(self):
         server, c = self.client(lambda path, h, b: (200, {"status": "done", "reply": "ok", "spent_usd": 0, "turns": 1, "wake_id": "wk_1"}, None))
-        c.wake("a", "hi", model=MODEL, idempotency_key="k1", context="Plan: pro", tools=[TOOL], tool_choice={"type": "tool", "name": "book_slot"})
+        c.wake("a", "hi", model=MODEL, idempotency_key="k1", state={"account.plan": "Pro", "cart.items": 3, "account.trial": None}, tools=[TOOL], tool_choice={"type": "tool", "name": "book_slot"})
         sent = server.requests[0][2]
-        self.assertEqual(sent["context"], "Plan: pro")
+        self.assertEqual(sent["state"], {"account.plan": "Pro", "cart.items": 3, "account.trial": None})
+        self.assertNotIn("context", sent)
         self.assertEqual(sent["tool_choice"], {"type": "tool", "name": "book_slot"})
 
     def test_absent_fields_are_not_sent(self):
         server, c = self.client(lambda path, h, b: (200, {"status": "done", "reply": "ok", "spent_usd": 0, "turns": 1, "wake_id": "wk_1"}, None))
         c.wake("a", "hi", model=MODEL, idempotency_key="k1")
+        self.assertNotIn("state", server.requests[0][2])
         self.assertNotIn("context", server.requests[0][2])
         self.assertNotIn("tool_choice", server.requests[0][2])
+
+    def test_context_is_gone(self):
+        server, c = self.client(lambda path, h, b: (200, {"status": "done", "reply": "ok", "spent_usd": 0, "turns": 1, "wake_id": "wk_1"}, None))
+        with self.assertRaises(TypeError):
+            c.wake("a", "hi", model=MODEL, idempotency_key="k1", context="Plan: pro")  # type: ignore[call-arg]
+        self.assertEqual(server.requests, [])
 
 
 if __name__ == "__main__":

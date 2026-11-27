@@ -153,8 +153,8 @@ export interface WakeBody {
   schedule?: boolean
   model: ModelSpec
   system?: string
-  /** Facts for this call only (opening hours, the signed-in user's plan), up to 16,000 characters. Not written to the journal or memory; send it again on the next call if the agent still needs it. */
-  context?: string
+  /** Keys and JSON values your app holds that the agent should know (the signed-in user's plan, what is in their cart), up to 64 keys a call, a key up to 120 characters on one line, a value up to 2,000 characters as JSON. A value the agent already has costs nothing to send again; a changed one is journaled with this call, so the agent keeps it and can search for it later. `null` removes a key; a key you leave out stays as it is. Replaces `context`, which the API no longer takes. */
+  state?: Record<string, unknown>
   tools?: ToolDecl[]
   /** Whether this call must end with a call to one of your tools. `auto` (default), `required`, or `{ type: 'tool', name }`. */
   tool_choice?: 'auto' | 'required' | { type: 'tool'; name: string }
