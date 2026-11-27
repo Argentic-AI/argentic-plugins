@@ -48,6 +48,8 @@ cd argentic-plugins/examples/core
    ARGENTIC_CRASH_AFTER=1 npm start
    ```
 
+   The process kills itself after the refund, so the command ends with an error (exit code 137 in most shells). That is the crash this example is about.
+
    fish: `env ARGENTIC_CRASH_AFTER=1 npm start`
 
 6. Run again, same command without the variable:
@@ -58,7 +60,7 @@ cd argentic-plugins/examples/core
 
    You will see `skip seq 7 refund_order: already done before` (your number may differ), then the email and ticket steps, then a one-line summary. The script also replays each wake and prints the outbox counts: one line per tool.
 
-7. Open the link the second run prints (`https://getargentic.com/platform/runs/<agent>/<run>/`). It is the run that crashed, in your dashboard. Under **Proof of what ran**, press **Check**: it rebuilds every prompt from the journal and compares it with what the model was sent. **Re-run** does the same for the engine's own decisions. Both are free.
+7. Open the link the second run prints (`https://getargentic.com/platform/runs/<agent>/<wake id>/`). It is the run that crashed, in your dashboard. Under **Proof of what ran**, press **Check**: it rebuilds every prompt from the journal and compares it with what the model was sent. **Re-run** does the same for the engine's own decisions. Both are free.
 
 Use `npm start -- --fresh` to start over with a new agent.
 

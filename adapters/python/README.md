@@ -14,16 +14,14 @@ Retry-safe tools for Stripe, Resend, SMTP, Slack, GitHub and a generic HTTP POST
 
 ## Install
 
-```
-pip install argentic-ai
-pip install "argentic-ai[langchain]"      # or [openai-agents], [pydantic-ai]
-```
-
-Straight from GitHub, if you want the latest code or a pinned tag (swap `main` for a tag such as `npm-v0.1.4`):
+The package is installed from this repository. It is not on PyPI, so `pip install argentic-ai` on its own fails.
 
 ```
 pip install "argentic-ai @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"
+pip install "argentic-ai[langchain] @ git+https://github.com/Argentic-AI/argentic-plugins@main#subdirectory=adapters/python"      # or [openai-agents], [pydantic-ai]
 ```
+
+For a build that does not move, swap `main` for a commit. The [quickstart](https://getargentic.com/docs/quickstart/) prints the line with the commit its examples were run against.
 
 You need an Argentic API key from https://getargentic.com/platform and a model key. You choose the model: any provider you have a key for.
 

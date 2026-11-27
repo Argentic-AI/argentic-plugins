@@ -51,6 +51,8 @@ const out = await run({
 console.log(out.reply)
 ```
 
+This example also uses the AI SDK and zod (`npm i ai zod`), and `refund` stands for your own billing code. Save it as a `.mjs` file. Before you run it, set `ARGENTIC_API_KEY`, `MODEL_KEY` and the model variables under [Your model](#your-model).
+
 `task` is the new event: what happened since the agent last ran, never the earlier messages. Keep `agent` and `runId` the same when a run is retried (the id of the event that woke the agent is a good `runId`). `ledgerPath` is optional: with it, finished actions are written to that file so a killed process does not run them twice; without it they are kept in memory for the call, so make your tools safe to repeat with the `ctx.idempotencyKey` your `execute` receives. A request that takes longer than `timeoutMs` (default 300000, 0 for no limit) counts as a network failure and is retried with the same key. If the ledger file is not valid JSON, `run` warns on stderr, sets the file aside as `<path>.corrupt` and starts empty, so finished actions may run again. `client.replay(agent, wakeId)` re-renders a wake's prompts from the journal and compares them to what the model saw; it calls no model and spends nothing.
 
 ## Your model
