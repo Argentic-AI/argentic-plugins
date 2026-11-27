@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "argentic",
   "version": "0.3.2",
-  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to wake agents and manage your account.",
+  "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded. One MCP server to inspect your agents' runs and manage your account.",
   "author": { "name": "Argentic", "url": "https://getargentic.com" },
   "homepage": "https://getargentic.com/docs",
   "license": "MIT",
@@ -29,7 +29,7 @@
         "termsOfServiceURL": "https://getargentic.com/terms",
         "defaultPrompt": [
           "Show my Argentic account and this month's usage",
-          "List the recent wakes for my agent and read its journal"
+          "List the recent runs for my agent"
         ],
         "brandColor": "#000000",
         "composerIcon": "./assets/logo.png",

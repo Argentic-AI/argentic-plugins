@@ -1,11 +1,11 @@
 ---
 name: argentic-fix
-description: Use when an Argentic run stopped or the user asks why ("why did my run stop", "resume it", "it hit a cap"). Finds the cause from the wake and its replay check, proposes a fix, resumes only after the user says yes.
+description: Use when an Argentic run stopped or the user asks why ("why did my run stop", "resume it", "it hit a cap"). Finds the cause from the wake and its replay check and proposes a fix. Resuming is done by the user's app.
 ---
 
 # Fix a run that stopped
 
-Resuming a run spends money on the user's model key. Find the cause first, say it, and wait for a yes before you resume.
+This MCP cannot wake or resume an agent: the user's app does that over the REST API, on its own model key. Find the cause first, say it, and tell the user what their app should do.
 
 ## Steps
 
@@ -13,7 +13,7 @@ Resuming a run spends money on the user's model key. Find the cause first, say i
 2. Read what `argentic_wake_get` says about the wake (its state, runs and any reply or error). If you need the individual steps, send the user to the run page in the dashboard (`get_run_links` gives the address); the MCP does not read journals. `argentic_replay` with `wake` set to the wake id checks the run still matches what the model was shown.
 3. State the cause in one sentence, with the evidence. Example: "The run stopped on `spend_cap`: it had spent $0.05 of a $0.05 limit after 6 turns."
 4. Propose the fix from the table below.
-5. Resume only after the user says yes. Use `argentic_resume`. It needs the model key on the connection.
+5. Tell the user the fix. To resume, their app calls `POST /v1/agents/{agent}/resume` with its own model key and API key. Do not try to resume from here.
 
 ## Status, meaning, fix
 
@@ -24,12 +24,12 @@ Resuming a run spends money on the user's model key. Find the cause first, say i
 | `spend_cap` or `budget_cap` | A spend limit stopped it. Work so far is kept. | Ask the user. If they agree, resume with a higher `max_usd`. For the organization budget, `set_budget` needs an owner or admin. |
 | `turn_cap` | It ran out of turns. | Resume with a higher `max_turns`. |
 | `time_cap` | It ran out of time. | Resume. It continues. |
-| `error`, `bad_model`, `model_key_rejected` | The model call failed or the provider refused. Nothing was spent. | Fix the model id or the key, then resume. The reply says why. |
-| `model_key_required` | The model key header is missing. | Use `argentic-setup`. The user adds the key to the connection. |
+| `error`, `bad_model`, `model_key_rejected` | The model call failed or the provider refused. Nothing was spent. | Fix the model id or the key in the app, then resume. The reply says why. |
+| `model_key_required` | The app's wake call has no model key header. | The user adds `X-Model-Key` to the app's call. |
 
 ## Raising a cap
 
-A cap stopped the run. Ask the human whether to raise the budget with `set_budget`, then resume. Never raise it on your own.
+A cap stopped the run. Ask the human whether to raise the budget with `set_budget`, then tell them to resume from their app. Never raise it on your own.
 
 ## What resume does
 
@@ -37,4 +37,4 @@ Anything you send, such as a higher `max_usd`, replaces what the wake had. A too
 
 ## After
 
-Tell the user the new status and what it spent (`spent_usd`). If it stopped again, go back to step 1 with the new wake. Do not loop on resume by yourself.
+If the app resumed and it stopped again, go back to step 1 with the new wake.

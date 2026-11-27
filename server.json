@@ -3,7 +3,7 @@
   "name": "io.github.Argentic-AI/argentic",
   "title": "Argentic",
   "description": "Argentic is an engine that keeps AI agents right for hours while prompt size is bounded.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "websiteUrl": "https://getargentic.com",
   "repository": {
     "url": "https://github.com/Argentic-AI/argentic-plugins",
@@ -12,15 +12,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://getargentic.com/mcp",
-      "headers": [
-        {
-          "name": "X-Model-Key",
-          "description": "Your own key for the model provider your agents run on. Only needed to wake an agent; Argentic does not store it.",
-          "isRequired": false,
-          "isSecret": true
-        }
-      ]
+      "url": "https://getargentic.com/mcp"
     }
   ]
 }

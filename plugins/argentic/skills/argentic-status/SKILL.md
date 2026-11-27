@@ -5,7 +5,7 @@ description: Use when the user asks to see their Argentic agents, what happened,
 
 # What are my agents doing
 
-This skill only reads. It makes no model call and spends nothing. Do not call `argentic_wake` or `argentic_resume` here.
+This skill only reads. It makes no model call and spends nothing. The MCP cannot wake or resume an agent.
 
 ## Steps
 
