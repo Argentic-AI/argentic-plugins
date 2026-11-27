@@ -6,7 +6,7 @@ If your agent runs out of context and gets worse after many tokens, that is the 
 
 This repo holds only manifests, skills, MCP settings and small client adapters. The engine is not in it.
 
-Start with the [prompt below](#ask-your-agent-to-do-it): your assistant integrates your app first. The connector comes after, as an optional dev tool. There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. The MCP only reads (runs, steps, proof, usage) and manages keys and budget. It cannot wake an agent or run a model: your own app wakes your agents.
+Start with the [prompt below](#ask-your-agent-to-do-it): your assistant integrates your app first. The connector comes after, as an optional dev tool. There is one MCP, `https://getargentic.com/mcp`. You sign in with your Argentic account and pick an organization. Sign-in is CIMD only: there is no client ID or secret to get from Argentic and no API key to paste into the app. The MCP reads your agents' runs and proof and manages API keys, usage and budget. It cannot wake an agent, resume a run or run a model: your own app wakes your agents.
 
 ## Try it
 
@@ -100,10 +100,10 @@ When that works, ask whether I also want the Argentic connector installed in thi
 - `argentic-setup` skill: integrates your app first, then offers the connector.
 - `argentic-quickstart` skill: add Argentic to your own project, with keys in `.env`, and run one small test call.
 - `argentic-status` skill: list your agents and which runs got cut off. Read only.
-- `argentic-fix` skill: find why a run stopped, then resume it or ask you before raising a limit.
+- `argentic-fix` skill: find why a run stopped, then tell you what your app should do (resume it, or raise a limit with your say-so).
 - `argentic` MCP server, signed in with your Argentic account.
   - Account tools: `get_account`, `list_api_keys`, `create_api_key`, `revoke_api_key`, `get_usage`, `set_budget`.
-  - Agent tools, read only: `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `argentic_agents`.
+  - Run tools, read only: `argentic_wakes`, `argentic_wake_get`, `argentic_replay`, `get_run_links`. They run no model and spend nothing.
   - `set_budget` needs an owner or admin. Other tools work as far as your role allows.
 
 MIT licensed.
