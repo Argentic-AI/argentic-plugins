@@ -11,6 +11,7 @@ import asyncio
 import http.client
 import inspect
 import json
+import math
 import os
 import re
 import signal
@@ -21,7 +22,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Mapping, TypedDict
 
 __version__ = "0.3.0"
@@ -35,7 +36,9 @@ TIMEOUT = 300.0  # seconds a socket may stay silent: a wake can run a long time,
 class ModelSpec(TypedDict, total=False):
     """The model a wake runs on. Give `provider` (a named endpoint) or `base_url` (any public https
     OpenAI-compatible endpoint on port 443), not both, plus `id` and `prices` (dollars per million
-    tokens, under `in` and `out`)."""
+    tokens, under `in` and `out`). Leave `prices` out only for a model the API has its own price for
+    (today, Anthropic's models on Anthropic's API); any other model is refused with `prices_required`
+    until you send them. A free model declares 0 and 0."""
 
     provider: str
     base_url: str
@@ -89,17 +92,31 @@ def hint_for(e: BaseException) -> str | None:
     """A next step for an error a first run tends to hit, or None. Examples print it instead of a traceback."""
     if not isinstance(e, ArgenticError):
         return None
-    code = e.body.get("error") if isinstance(e.body, dict) else None
+    body = e.body if isinstance(e.body, dict) else {}
+    code = body.get("error")
+    # What the API said went wrong, in its own words: the hint names the fix, and this names the cause.
+    detail = body.get("detail")
+    said = "" if detail is None else f" The API said: {(detail if isinstance(detail, str) else json.dumps(detail))[:300]}"
     if e.status == 401:
         return "Check ARGENTIC_API_KEY. A key only works on the API it was made for, so if you set ARGENTIC_BASE_URL, make the key in that dashboard."
+    if code == "model_key_required":
+        return "No model key was sent. Set MODEL_KEY to the key your model provider gave you."
     if code == "model_key_rejected":
         return "Your model provider refused MODEL_KEY. Check it is a key for the provider in the error."
     if code == "bad_embed_key":
         return "The API cannot use EMBED_KEY as sent: EMBED_PROVIDER is cohere (the default) or bedrock, EMBED_REGION goes with bedrock only, and the key has no spaces. Unset EMBED_KEY to recall by words alone."
     if code == "bad_model":
-        return "Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves."
+        return "The model was refused. Check the provider name and the model id you gave: ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL, and ARGENTIC_MODEL_ID." + said
+    if code == "prices_required":
+        return "Argentic has no price for this model, and it does not guess one. Set ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT to its prices in dollars per million tokens, or give prices in the model you pass. A free model is 0 and 0."
+    if code == "idempotency_key_reused":
+        return "This run id (the idempotency key) was already used for a different request. To retry, send the same request again. For a new event, or after changing the request, use a new run id."
+    if code == "history_resent":
+        return "Send only the new event. Argentic already holds what this agent said and did, so a task that repeats it is refused." + said
+    if code == "bad_request" and "model.prices" in said:
+        return "Prices are numbers, in dollars per million tokens, such as 0.25 (0 for a free model), not text." + said
     if e.status == 402:
-        return "This account hit its usage limit. Argentic is free in beta, so there is nothing to buy: email hi@getargentic.com and we will raise it."
+        return "This organization has no agent steps left to run a wake. Open Billing in the dashboard at https://getargentic.com/platform/ to see what is left and add more."
     if e.status == 429:
         return "Too many requests a minute for this key. Wait for the time in the error and run the same command again."
     if e.status is None or e.status >= 500:
@@ -126,23 +143,47 @@ class WakeResponse:
 
 def model_from_env(env: Mapping[str, str] | None = None) -> ModelSpec:
     """The model from ARGENTIC_MODEL_ID plus ARGENTIC_MODEL_PROVIDER (a named endpoint) or
-    ARGENTIC_MODEL_BASE_URL (any public https OpenAI-compatible endpoint), and the prices. With
-    There is no default model: without ARGENTIC_MODEL_ID and one of the two it raises ValueError. ARGENTIC_BASE_URL is Argentic's own API, not the model's."""
+    ARGENTIC_MODEL_BASE_URL (any public https OpenAI-compatible endpoint), and the prices in
+    ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT (dollars per million tokens).
+    There is no default model: without ARGENTIC_MODEL_ID and one of the two it raises ValueError.
+    A price is never guessed either: with neither price set the model carries no `prices` (the API then
+    uses its own price if it has one for that model and refuses the call if it does not), and one price
+    without the other, or a price that is not a number, raises ValueError. A free model sets both to 0.
+    ARGENTIC_BASE_URL is Argentic's own API, not the model's."""
     e = os.environ if env is None else env
     if not e.get("ARGENTIC_MODEL_ID"):
         raise ValueError("Set ARGENTIC_MODEL_ID to the model you want, with ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL.")
     provider, base_url = e.get("ARGENTIC_MODEL_PROVIDER"), e.get("ARGENTIC_MODEL_BASE_URL")
     if bool(provider) == bool(base_url):
         raise ValueError("Set exactly one of ARGENTIC_MODEL_PROVIDER (a named endpoint) and ARGENTIC_MODEL_BASE_URL (a public https OpenAI-compatible endpoint).")
-    where = {"base_url": base_url} if base_url else {"provider": provider}
-    return {
-        **where,
-        "id": e["ARGENTIC_MODEL_ID"],
-        "prices": {
-            "in": float(e.get("ARGENTIC_PRICE_IN", "0")),
-            "out": float(e.get("ARGENTIC_PRICE_OUT", "0")),
-        },
-    }
+    spec: ModelSpec = {"base_url": base_url} if base_url else {"provider": provider}  # type: ignore[typeddict-item]
+    spec["id"] = e["ARGENTIC_MODEL_ID"]
+    prices = _prices_from_env(e)
+    if prices is not None:
+        spec["prices"] = prices
+    return spec
+
+
+def _prices_from_env(e: Mapping[str, str]) -> dict[str, float] | None:
+    """ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT as numbers, or None when neither is set."""
+    def read(name: str) -> float | None:
+        raw = (e.get(name) or "").strip()
+        if not raw:
+            return None
+        try:
+            n = float(raw)
+        except ValueError:
+            n = -1.0
+        if not math.isfinite(n) or n < 0:
+            raise ValueError(f"{name} must be a number: the model's price in dollars per million tokens, such as 0.25 (0 for a free model). It is set to \"{raw}\".")
+        return n
+    price_in, price_out = read("ARGENTIC_PRICE_IN"), read("ARGENTIC_PRICE_OUT")
+    if price_in is None and price_out is None:
+        return None
+    if price_in is None or price_out is None:
+        missing = "ARGENTIC_PRICE_IN" if price_in is None else "ARGENTIC_PRICE_OUT"
+        raise ValueError(f"Set both ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT (dollars per million tokens, 0 for a free model): {missing} is not set.")
+    return {"in": price_in, "out": price_out}
 
 
 class Argentic:
@@ -241,7 +282,7 @@ class Argentic:
                 self._sleep(wait)
                 continue
             if status == 422 and data.get("error") == "idempotency_key_reused":
-                raise ArgenticError("idempotency key reused with a different body (a bug)", status, data)
+                raise ArgenticError(f"{what} failed: HTTP 422 idempotency_key_reused: this run id (the idempotency key) was already used for a different request. Send the same request again to retry, or use a new run id.", status, data)
             if status is None or status >= 500:  # 5xx or network: retry the same key with backoff
                 said = f"HTTP {status}" if status is not None else f"no answer: {net}"
                 if failures >= len(self.backoff):
@@ -392,6 +433,10 @@ class Tool:
     description: str
     parameters: dict[str, Any]
     execute: Callable[[dict[str, Any], "ToolContext"], Any]
+    once_per: str | None = None
+    """A business-operation key such as `refund:{order_id}`. Each `{name}` is filled in from the call's arguments, and
+    Argentic refuses a second call that produces the same key, in this wake or any later one, whatever else the model
+    writes. Every `{name}` must be a required string, number, integer or boolean parameter of this tool."""
 
 
 @dataclass
@@ -529,6 +574,62 @@ def _is_nested(schema: dict[str, Any] | None) -> bool:
     return False
 
 
+_ONCE_PER_PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]{0,39})\}")
+
+
+def check_once_per(tool: str, template: Any, parameters: dict[str, Any]) -> None:
+    """Check a `once_per` template the way the API does, so a mistake fails here with a clear message
+    instead of as a refused wake. `parameters` is the tool's JSON schema. Raises ValueError."""
+    who = f'tool "{tool}": '
+    if not isinstance(template, str):
+        raise ValueError(f'{who}once_per must be a string, such as "refund:{{order_id}}"')
+    if not 3 <= len(template) <= 120:
+        raise ValueError(f"{who}once_per must be 3 to 120 characters")
+    if not re.fullmatch(r"[A-Za-z0-9_:.\-{}]+", template):
+        raise ValueError(f"{who}once_per: letters, digits and _ : . - plus {{argument}} placeholders")
+    names = _ONCE_PER_PLACEHOLDER.findall(template)
+    if not names:
+        raise ValueError(f'{who}once_per needs at least one {{argument}}, such as "refund:{{order_id}}"')
+    if re.search(r"[{}]", _ONCE_PER_PLACEHOLDER.sub("", template)):
+        raise ValueError(f"{who}once_per has an unmatched brace")
+    props = (parameters or {}).get("properties") or {}
+    required = (parameters or {}).get("required")
+    for n in names:
+        prop = props.get(n)
+        if not isinstance(prop, dict) or prop.get("type") == "array":
+            raise ValueError(f"{who}once_per {{{n}}} must be a string, number, integer or boolean property of this tool")
+        if not isinstance(required, (list, tuple)) or n not in required:
+            raise ValueError(f"{who}once_per {{{n}}} must be a required property, so every call has a key")
+
+
+def _declare(t: "Tool") -> dict[str, Any]:
+    """What Argentic is told about a tool: its name, description and schema, and its `once_per` key when it has one."""
+    schema = to_argentic_schema(t.parameters)
+    decl: dict[str, Any] = {"name": t.name, "description": t.description or t.name, "parameters": schema}
+    if t.once_per is not None:
+        check_once_per(t.name, t.once_per, schema)
+        decl["once_per"] = t.once_per
+    return decl
+
+
+def with_once_per(tools: list["Tool"], once_per: Mapping[str, str] | None) -> list["Tool"]:
+    """Set `once_per` on tools by name, for the framework adapters, whose tools have nowhere to carry it:
+    `{"refund_order": "refund:{order_id}"}`. Raises ValueError on a name that is not a tool or a template the API would refuse."""
+    if not once_per:
+        return tools
+    names = {t.name for t in tools}
+    for k in once_per:
+        if k not in names:
+            raise ValueError(f'once_per names "{k}", which is not one of the tools')
+    out = []
+    for t in tools:
+        if t.name in once_per:
+            check_once_per(t.name, once_per[t.name], to_argentic_schema(t.parameters))
+            t = replace(t, once_per=once_per[t.name])
+        out.append(t)
+    return out
+
+
 def to_argentic_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """Trim a JSON schema to the subset Argentic accepts: an object of string, number,
     integer, boolean or array-of-those properties, with description, enum and required.
@@ -595,8 +696,7 @@ def run(
         raise ValueError("run: pass `task` (the new event) or `fire_due=True`, not both and not neither")
     ledger = Ledger(ledger_path)
     by_name = {t.name: t for t in tools}
-    declared = [{"name": t.name, "description": t.description or t.name,
-                 "parameters": to_argentic_schema(t.parameters)} for t in tools]
+    declared = [_declare(t) for t in tools]
     wakes: list[str] = []
     spent = 0.0
     reply, status, steps = "", "max_steps", 0

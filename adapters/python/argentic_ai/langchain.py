@@ -6,15 +6,16 @@ LangChain or LangGraph.
 from __future__ import annotations
 
 import json
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from langchain_core.utils.function_calling import convert_to_openai_tool
 
-from .core import Tool
+from .core import Tool, with_once_per
 
 
-def from_langchain_tools(tools: Iterable[Any]) -> list[Tool]:
-    """Turn BaseTool / @tool objects into run tools (Argentic accepts up to 8)."""
+def from_langchain_tools(tools: Iterable[Any], *, once_per: Mapping[str, str] | None = None) -> list[Tool]:
+    """Turn BaseTool / @tool objects into run tools (Argentic accepts up to 8).
+    `once_per` maps a tool name to its once-per-operation key, such as `{"refund_order": "refund:{order_id}"}`."""
     out: list[Tool] = []
     for t in tools:
         fn = convert_to_openai_tool(t)["function"]
@@ -25,7 +26,7 @@ def from_langchain_tools(tools: Iterable[Any]) -> list[Tool]:
             # bind t as a default so each tool keeps its own handler
             execute=lambda args, ctx, t=t: _invoke(t, args, ctx),
         ))
-    return out
+    return with_once_per(out, once_per)
 
 
 def _invoke(t: Any, args: dict, ctx: Any) -> Any:

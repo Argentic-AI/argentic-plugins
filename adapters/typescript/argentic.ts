@@ -14,21 +14,43 @@ export interface ModelSpec {
   /** Any public https OpenAI-compatible endpoint on port 443, for a provider with no preset. Give this or `provider`, not both. */
   base_url?: string
   id: string
-  /** Dollars per million tokens. `cache_hit` is what a cached input token costs, if your provider has a cache price. */
-  prices: { in: number; out: number; cache_hit?: number }
+  /**
+   * Dollars per million tokens. `cache_hit` is what a cached input token costs, if your provider has a cache price. Leave `prices` out only
+   * for a model the API has its own price for (today, Anthropic's models on Anthropic's API); any other model is refused with
+   * `prices_required` until you send them. A free model declares `{ in: 0, out: 0 }`.
+   */
+  prices?: { in: number; out: number; cache_hit?: number }
 }
 
 /**
  * The model from `ARGENTIC_MODEL_ID` plus `ARGENTIC_MODEL_PROVIDER` (a named endpoint) or `ARGENTIC_MODEL_BASE_URL` (any public https
  * OpenAI-compatible endpoint), and `ARGENTIC_PRICE_IN` / `ARGENTIC_PRICE_OUT` in dollars per million tokens. There is no default model:
- * without `ARGENTIC_MODEL_ID` and one of the two it throws. `ARGENTIC_BASE_URL` is Argentic's own API, not the model's.
+ * without `ARGENTIC_MODEL_ID` and one of the two it throws. A price is never guessed either: with neither price set the model carries no
+ * `prices` (the API then uses its own price if it has one for that model and refuses the call if it does not), one price without the other
+ * throws, and so does a price that is not a number. A free model sets both to 0. `ARGENTIC_BASE_URL` is Argentic's own API, not the model's.
  */
 export function modelFromEnv(e: Record<string, string | undefined> = process.env): ModelSpec {
   if (!e.ARGENTIC_MODEL_ID) throw new Error('Set ARGENTIC_MODEL_ID to the model you want, with ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL.')
   if (e.ARGENTIC_MODEL_PROVIDER && e.ARGENTIC_MODEL_BASE_URL) throw new Error('Set ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL, not both.')
   if (!e.ARGENTIC_MODEL_PROVIDER && !e.ARGENTIC_MODEL_BASE_URL) throw new Error('Set ARGENTIC_MODEL_PROVIDER (a named endpoint) or ARGENTIC_MODEL_BASE_URL (a public https OpenAI-compatible endpoint).')
   const where = e.ARGENTIC_MODEL_BASE_URL ? { base_url: e.ARGENTIC_MODEL_BASE_URL } : { provider: e.ARGENTIC_MODEL_PROVIDER }
-  return { ...where, id: e.ARGENTIC_MODEL_ID, prices: { in: Number(e.ARGENTIC_PRICE_IN ?? 0), out: Number(e.ARGENTIC_PRICE_OUT ?? 0) } }
+  const prices = pricesFromEnv(e)
+  return { ...where, id: e.ARGENTIC_MODEL_ID, ...(prices && { prices }) }
+}
+
+/** ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT as numbers, or undefined when neither is set. One without the other, or a value that is not a price, throws. */
+function pricesFromEnv(e: Record<string, string | undefined>): { in: number; out: number } | undefined {
+  const read = (name: 'ARGENTIC_PRICE_IN' | 'ARGENTIC_PRICE_OUT'): number | undefined => {
+    const raw = e[name]?.trim()
+    if (!raw) return undefined
+    const n = Number(raw)
+    if (!Number.isFinite(n) || n < 0) throw new Error(`${name} must be a number: the model's price in dollars per million tokens, such as 0.25 (0 for a free model). It is set to "${raw}".`)
+    return n
+  }
+  const input = read('ARGENTIC_PRICE_IN'), output = read('ARGENTIC_PRICE_OUT')
+  if (input === undefined && output === undefined) return undefined
+  if (input === undefined || output === undefined) throw new Error(`Set both ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT (dollars per million tokens, 0 for a free model): ${input === undefined ? 'ARGENTIC_PRICE_IN' : 'ARGENTIC_PRICE_OUT'} is not set.`)
+  return { in: input, out: output }
 }
 
 /** What Argentic is told about a tool. It is declared, never executed by Argentic. */
@@ -204,12 +226,20 @@ function refusesResults(e: unknown): boolean {
 /** A next step for an error a first run tends to hit, or undefined. Examples print it instead of a stack trace. */
 export function hintFor(e: unknown): string | undefined {
   if (!(e instanceof ArgenticError)) return undefined
-  const code = (e.body as { error?: string } | undefined)?.error
+  const body = e.body as { error?: string; detail?: unknown } | undefined
+  const code = body?.error
+  // What the API said went wrong, in its own words: the hint names the fix, and this names the cause (which provider, which model id, which field).
+  const said = body?.detail === undefined ? '' : ` The API said: ${(typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)).slice(0, 300)}`
   if (e.status === 401) return 'Check ARGENTIC_API_KEY. A key only works on the API it was made for, so if you set ARGENTIC_BASE_URL, make the key in that dashboard.'
+  if (code === 'model_key_required') return 'No model key was sent. Set MODEL_KEY to the key your model provider gave you.'
   if (code === 'model_key_rejected') return 'Your model provider refused MODEL_KEY. Check it is a key for the provider in the error.'
   if (code === 'bad_embed_key') return 'The API cannot use EMBED_KEY as sent: EMBED_PROVIDER is cohere (the default) or bedrock, EMBED_REGION goes with bedrock only, and the key has no spaces. Unset EMBED_KEY to recall by words alone.'
-  if (code === 'bad_model') return 'Your provider does not know this model id. Set ARGENTIC_MODEL_ID to one it serves.'
-  if (e.status === 402) return 'This account hit its usage limit. Argentic is free in beta, so there is nothing to buy: email hi@getargentic.com and we will raise it.'
+  if (code === 'bad_model') return 'The model was refused. Check the provider name and the model id you gave: ARGENTIC_MODEL_PROVIDER or ARGENTIC_MODEL_BASE_URL, and ARGENTIC_MODEL_ID.' + said
+  if (code === 'prices_required') return 'Argentic has no price for this model, and it does not guess one. Set ARGENTIC_PRICE_IN and ARGENTIC_PRICE_OUT to its prices in dollars per million tokens, or give prices in the model you pass. A free model is 0 and 0.'
+  if (code === 'idempotency_key_reused') return 'This run id (the idempotency key) was already used for a different request. To retry, send the same request again. For a new event, or after changing the request, use a new run id.'
+  if (code === 'history_resent') return 'Send only the new event. Argentic already holds what this agent said and did, so a task that repeats it is refused.' + said
+  if (code === 'bad_request' && said.includes('model.prices')) return 'Prices are numbers, in dollars per million tokens, such as 0.25 (0 for a free model), not text.' + said
+  if (e.status === 402) return 'This organization has no agent steps left to run a wake. Open Billing in the dashboard at https://getargentic.com/platform/ to see what is left and add more.'
   if (e.status === 429) return 'Too many requests a minute for this key. Wait for the time in the error and run the same command again.'
   if (e.status === undefined || e.status >= 500) return 'The API did not answer. Run the same command again in a minute: it picks up where it stopped.'
   return undefined

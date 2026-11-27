@@ -89,6 +89,16 @@ Hooks on `run`: `on_wake_start(step)` just before each wake is sent, `on_wake(st
 
 Each follow-up wake also sends the tool results as the `results` field, `[{"seq": n, "result": ...}]`, next to the message text the model reads, so the API journals the real result of every call (0.1.8). The first wake has none, and a result the ledger already held is sent again like the others. Pass `structured_results=False` to `run` for the text only. If the API does not know the field yet, it answers 400 and names `results`; the client sends that wake again once without it, under the same key, and leaves it out from then on. Calling `client.wake()` yourself, pass `results=[...]` with the `message`, never with `fire_due`, at most 100 entries.
 
+## Once per operation (`once_per`)
+
+A tool can declare `once_per`, a key such as `refund:{order_id}` filled in from the call's arguments. Argentic then refuses a second call with the same key, in this wake or any later one, whatever the model writes. Set it on a `Tool`:
+
+```python
+Tool("refund_order", "Refund an order in full.", order_id_schema, refund_order, once_per="refund:{order_id}")
+```
+
+For framework tools, pass `once_per={"refund_order": "refund:{order_id}"}` to `from_langchain_tools`, `from_openai_agents_tools` or `from_pydantic_ai_tools`. Every `{name}` must be a required string, number, integer or boolean parameter of the tool, and the template is checked before the request is sent.
+
 ## Waking the agent later
 
 Argentic has no clock of its own: your app decides when an agent runs. Pass `schedule=True` on the agent's wakes so it can put a time on a plan. Every answer then has `wake_at`, the time the agent next wants waking, or `None`. Keep the latest one per agent in your own scheduler (cron, Celery's `eta`, a delayed queue job) and at that time wake the agent with `fire_due=True`:
@@ -125,7 +135,7 @@ A `fire_due` wake with nothing due makes no model call and costs nothing. `clien
 | `EMBED_KEY` | Your embedding provider's key, sent as `X-Embed-Key`. With it, the agent's recall also finds what was said in other words; without it, recall goes by words. Argentic never stores it, and your provider bills you for the embedding calls. |
 | `EMBED_PROVIDER`, `EMBED_REGION` | `cohere` (the default) or `bedrock`, and for `bedrock` the region your key calls (default `us-east-1`). |
 | `ARGENTIC_BASE_URL` | The API address. Unset, it is `https://api.getargentic.com`. |
-| `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | Your model, read by `model_from_env()`. Give a provider name or a base URL (a public https OpenAI-compatible endpoint), not both. `ARGENTIC_BASE_URL` above is Argentic's API, not the model's. Prices are dollars per million tokens. With no `ARGENTIC_MODEL_ID` it raises `ValueError`: there is no default model. |
+| `ARGENTIC_MODEL_ID`, `ARGENTIC_MODEL_PROVIDER` or `ARGENTIC_MODEL_BASE_URL`, `ARGENTIC_PRICE_IN`, `ARGENTIC_PRICE_OUT` | Your model, read by `model_from_env()`. Give a provider name or a base URL (a public https OpenAI-compatible endpoint), not both. `ARGENTIC_BASE_URL` above is Argentic's API, not the model's. Prices are dollars per million tokens, and a price is never guessed: with neither price set, no `prices` are sent, so the API uses its own price for a model it has one for (today, Anthropic's models on Anthropic's API) and refuses any other with `prices_required`. One price without the other, or a price that is not a number, raises `ValueError`. A free model sets both to `0`. With no `ARGENTIC_MODEL_ID` it raises `ValueError`: there is no default model. |
 
 `Argentic(api_key=..., model_key=..., embed_key=..., base_url=..., timeout=300)` takes the same things as arguments. A 409 (the agent is mid-run) waits and sends the same request again, and a 5xx or a network failure retries with the same key after 1, 2, 4 and 8 seconds, so a retry never adds a message twice. `backoff=` and `max_queued_waits=` change both. If the ledger file is not valid JSON, `run` warns on stderr, sets it aside as `<path>.corrupt` and starts empty, so finished actions may run again. Errors are `ArgenticError` with `.status` (None when no answer came back) and `.body`; `hint_for(error)` returns a next step for the ones a first run tends to hit.
 

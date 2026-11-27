@@ -5,7 +5,7 @@ Only the tool definitions are used. Argentic runs the agent loop, not `Agent.run
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 
 from pydantic_ai import RunContext, Tool
 from pydantic_ai.models.test import TestModel
@@ -14,13 +14,15 @@ from pydantic_ai.usage import RunUsage
 from pydantic_core import to_jsonable_python
 
 from .core import Tool as ArgenticTool
+from .core import with_once_per
 
 
-def from_pydantic_ai_tools(tools: Iterable[Tool | Callable[..., Any]]) -> list[ArgenticTool]:
-    """Turn Pydantic AI tools (`Tool` objects, or plain functions) into run tools (Argentic accepts up to 8)."""
+def from_pydantic_ai_tools(tools: Iterable[Tool | Callable[..., Any]], *, once_per: Mapping[str, str] | None = None) -> list[ArgenticTool]:
+    """Turn Pydantic AI tools (`Tool` objects, or plain functions) into run tools (Argentic accepts up to 8).
+    `once_per` maps a tool name to its once-per-operation key, such as `{"refund_order": "refund:{order_id}"}`."""
     toolset = FunctionToolset([t if isinstance(t, Tool) else Tool(t) for t in tools])
     defs = asyncio.run(_defs(toolset))
-    return [
+    return with_once_per([
         ArgenticTool(
             name=name,
             description=d.description or "",
@@ -29,7 +31,7 @@ def from_pydantic_ai_tools(tools: Iterable[Tool | Callable[..., Any]]) -> list[A
             execute=lambda args, ctx, name=name: asyncio.run(_call(toolset, name, args, ctx.idempotency_key)),
         )
         for name, d in defs.items()
-    ]
+    ], once_per)
 
 
 def _context(key: str, name: str | None = None) -> RunContext[None]:
