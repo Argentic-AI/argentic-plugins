@@ -1,6 +1,6 @@
 # Argentic plugins
 
-[Argentic](https://getargentic.com/docs) is an engine that keeps AI agents right for hours while prompt size is bounded. This repo has the skills and the optional connector that let your coding assistant integrate Argentic into your app, then manage your API keys, usage and budget.
+[Argentic](https://getargentic.com/docs) (getargentic.com) is an engine that keeps AI agents right for hours while prompt size is bounded. This repo has the skills and the optional connector that let your coding assistant integrate Argentic into your app, then manage your API keys, usage and budget.
 
 If your agent runs out of context and gets worse after many tokens, that is the problem the engine is for. [How it compares with Lossless Claw, Hindsight, Mem0 and Letta](https://getargentic.com/blog/my-agent-gets-worse-over-long-runs/), read from each one's own docs.
 
