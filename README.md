@@ -68,17 +68,13 @@ url = "https://getargentic.com/mcp"
 
 Sign in with `codex mcp login argentic`.
 
-## Also: crash-test any agent (5 minutes)
-
-[`crash-test/`](crash-test/) is a small open tool that kills an agent at each tool call, restarts it, and reports which actions ran twice. It works on agents built on any framework, with or without Argentic, and needs no keys. Start with the [quickstart](crash-test/README.md#quickstart-5-minutes).
-
 ## Without the MCP
 
 The HTTP API still works on its own: `POST /v1/agents/{agent}/wake` and the other routes take an API key (`aek_...`, created by the `create_api_key` tool or in the dashboard) as `Authorization: Bearer`, plus `X-Model-Key` to wake. Your app makes that call, never the MCP. See the [docs](https://getargentic.com/docs).
 
 ## Bring your tools
 
-Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Bring your tools, your prompt and your model key. Argentic runs the loop and replaces your framework's. [`adapters/`](adapters/) has one small tool converter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. Kill it mid-run and it resumes without repeating a finished action. To try Argentic with nothing to write, see [Try it](#try-it); the Python package still has `python -m argentic_ai demo`.
+Already have tools written for the Vercel AI SDK, Mastra, LangChain / LangGraph, Pydantic AI or the OpenAI Agents SDK? Bring your tools, your prompt and your model key. Argentic runs the loop and replaces your framework's. [`adapters/`](adapters/) has one small tool converter per framework (TypeScript: `npm i @argentic-ai/client`; Python: `argentic-ai`, coming to PyPI, until then `pip install` it from this repo as [`adapters/python`](adapters/python/README.md) describes), and [`examples/`](examples/) has a runnable refund agent for each, plus one with no framework at all. To try Argentic with nothing to write, see [Try it](#try-it); the Python package still has `python -m argentic_ai demo`.
 
 ## Ask your agent to do it
 
